@@ -1,0 +1,5 @@
+{
+  "name": "Controlador Financeiro Inteligente",
+  "description": "Um aplicativo de controle financeiro pessoal que permite gerenciar entradas, saídas, metas e obter insights inteligentes sobre seus gastos com a ajuda da IA do Gemini.",
+  "requestFramePermissions": []
+}
