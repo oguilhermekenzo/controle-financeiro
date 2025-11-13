@@ -14,7 +14,7 @@ const getLogoSrc = (brand: CardBrand): string | null => {
     const slug = brand.toLowerCase().replace(/\s+/g, '-');
     
     // Assuming PNG files as per user's instructions on file naming.
-    return `/components/images/bandeira_${slug}.png`;
+    return `/images/bandeira_${slug}.png`;
 }
 
 const CardBrandLogo: React.FC<CardBrandLogoProps> = ({ brand, className = 'h-8' }) => {

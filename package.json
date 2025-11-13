@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "rm -rf dist && mkdir -p dist/components && cp index.html dist/ && (cp -r components/images dist/components/images || true) && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap"
+    "build": "rm -rf dist && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap && cp -r public/. dist/"
   },
   "dependencies": {
     "@google/genai": "^0.14.0",

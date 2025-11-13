@@ -18,7 +18,7 @@ const getLogoSrc = (bank: Bank): string | null => {
     .replace(/\s+/g, '-'); // replace spaces with hyphens
   
   // Assuming PNG files as per user's instructions on file naming.
-  return `/components/images/banco_${slug}.png`;
+  return `/images/banco_${slug}.png`;
 };
 
 const BankLogo: React.FC<BankLogoProps> = ({ bank, className = 'h-8' }) => {
