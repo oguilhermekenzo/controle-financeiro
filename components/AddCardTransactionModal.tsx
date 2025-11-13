@@ -148,110 +148,116 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
   return (
     <>
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-      <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-md p-8 relative animate-fade-in-up">
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
-          <Icon name="xmark" className="h-6 w-6" />
-        </button>
-        <h2 className="text-2xl font-bold text-white mb-6">
-          {isEditing ? 'Editar Gasto no Cartão' : 'Novo Lançamento'}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="sm:col-span-2">
-                <label htmlFor="card" className="block text-sm font-medium text-slate-300 mb-1">Cartão *</label>
-                <CustomSelect
-                  id="card"
-                  value={cardId}
-                  onChange={setCardId}
-                  options={cards.map(c => ({ value: c.id, label: c.name }))}
-                />
-            </div>
-            <div className="sm:col-span-2">
-                <label htmlFor="ccDescription" className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
-                <input type="text" id="ccDescription" value={description} onChange={e => setDescription(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label htmlFor="ccAmount" className="block text-sm font-medium text-slate-300 mb-1">Valor (R$) *</label>
-                    <input type="number" id="ccAmount" value={amount} onChange={e => { setAmount(e.target.value); setIsUserEditingInstallmentAmount(false);}}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                        placeholder="0,00" step="0.01" inputMode="decimal" required disabled={isEditing} />
-                </div>
-                <div>
-                    <label htmlFor="ccDate" className="block text-sm font-medium text-slate-300 mb-1">Data</label>
-                     <button type="button" onClick={() => setDatePickerOpen(true)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
-                    >
-                        <span>{new Date(date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
-                        <Icon name="calendar-days" />
-                    </button>
-                </div>
-            </div>
-             <div className="grid grid-cols-2 gap-4">
-                 <div>
-                    <label htmlFor="ccPerson" className="block text-sm font-medium text-slate-300 mb-1">Pessoa *</label>
-                    <CustomSelect
-                      id="ccPerson"
-                      value={personId}
-                      onChange={setPersonId}
-                      placeholder="Selecione..."
-                      options={[{value: '', label: 'Selecione...'}, ...people.map(p => ({ value: p.id, label: p.name }))]}
-                    />
-                 </div>
-                 <div>
-                    <label htmlFor="ccCategory" className="block text-sm font-medium text-slate-300 mb-1">Categoria</label>
-                    <CustomSelect
-                      id="ccCategory"
-                      value={category}
-                      onChange={setCategory}
-                      placeholder="Selecione..."
-                      options={[{value: '', label: 'Selecione...'}, ...filteredCategories.map(c => ({ value: c.name, label: c.name }))]}
-                    />
-                 </div>
-            </div>
-            
-            {!isEditing && (
-              <div className="bg-slate-900/70 p-4 rounded-xl">
-                <h3 className="text-lg font-semibold text-white mb-3">Parcelamento</h3>
-                <div className="grid grid-cols-2 gap-4">
-                   <div>
-                        <label htmlFor="ccInstallments" className="block text-sm font-medium text-slate-300 mb-1">Nº de Parcelas</label>
-                        <input type="number" id="ccInstallments" value={installments} onChange={e => { setInstallments(e.target.value); setIsUserEditingInstallmentAmount(false); }}
-                            min="1" inputMode="numeric" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
-                    </div>
-                    <div>
-                        <label htmlFor="ccInstallmentAmount" className="block text-sm font-medium text-slate-300 mb-1">Valor da Parcela</label>
-                        <input type="number" id="ccInstallmentAmount" value={installmentAmount} 
-                              onChange={e => { setInstallmentAmount(e.target.value); setIsUserEditingInstallmentAmount(true); }}
-                              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                              placeholder="0,00" step="0.01" inputMode="decimal" required disabled={numInstallments <= 1} />
-                    </div>
-                </div>
-                 {numInstallments > 1 && (
-                    <div className="bg-slate-800 p-4 rounded-lg space-y-2 mt-4 text-sm">
-                        <div className="flex justify-between text-slate-400"><span>Valor Original:</span><span className="text-slate-200 font-medium">{formatCurrencyLocal(numAmount)}</span></div>
-                        <div className="flex justify-between text-slate-400"><span>Valor com Juros:</span><span className="text-slate-200 font-medium">{formatCurrencyLocal(totalWithInterest)}</span></div>
-                        <div className="flex justify-between text-slate-400"><span>Juros:</span><span className={`font-medium ${interestAmount > 0.005 ? 'text-rose-400' : 'text-slate-200'}`}>{formatCurrencyLocal(interestAmount)} ({interestPercentage.toFixed(2).replace('.', ',')}%)</span></div>
-                        <div className="border-t border-slate-700 my-2 pt-2">
-                           <div className="flex justify-between text-slate-200 font-semibold text-base"><span>{numInstallments}x de:</span><span>{formatCurrencyLocal(numInstallmentAmount)}</span></div>
-                        </div>
-                    </div>
-                )}
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-md relative animate-fade-in-up flex flex-col max-h-[90vh]">
+        <div className="p-8 pb-0 flex-shrink-0">
+          <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
+            <Icon name="xmark" className="h-6 w-6" />
+          </button>
+          <h2 className="text-2xl font-bold text-white mb-6">
+            {isEditing ? 'Editar Gasto no Cartão' : 'Novo Lançamento'}
+          </h2>
+        </div>
+        
+        <div className="flex-grow overflow-y-auto px-8">
+          <form id="card-tx-form" onSubmit={handleSubmit} className="space-y-4">
+              <div className="sm:col-span-2">
+                  <label htmlFor="card" className="block text-sm font-medium text-slate-300 mb-1">Cartão *</label>
+                  <CustomSelect
+                    id="card"
+                    value={cardId}
+                    onChange={setCardId}
+                    options={cards.map(c => ({ value: c.id, label: c.name }))}
+                  />
               </div>
-            )}
-            
-            <div className="sm:col-span-2">
-                <label htmlFor="ccNotes" className="block text-sm font-medium text-slate-300 mb-1">Observações</label>
-                <textarea id="ccNotes" value={notes} onChange={e => setNotes(e.target.value)} rows={3}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
-            </div>
-          <div className="pt-6 flex justify-end space-x-3">
-            <button type="button" onClick={onClose} className="px-5 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors font-semibold">Cancelar</button>
-            <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
-                {isEditing ? 'Salvar' : 'Criar'}
-            </button>
-          </div>
-        </form>
+              <div className="sm:col-span-2">
+                  <label htmlFor="ccDescription" className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
+                  <input type="text" id="ccDescription" value={description} onChange={e => setDescription(e.target.value)}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label htmlFor="ccAmount" className="block text-sm font-medium text-slate-300 mb-1">Valor (R$) *</label>
+                      <input type="number" id="ccAmount" value={amount} onChange={e => { setAmount(e.target.value); setIsUserEditingInstallmentAmount(false);}}
+                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                          placeholder="0,00" step="0.01" inputMode="decimal" required disabled={isEditing} />
+                  </div>
+                  <div>
+                      <label htmlFor="ccDate" className="block text-sm font-medium text-slate-300 mb-1">Data</label>
+                      <button type="button" onClick={() => setDatePickerOpen(true)}
+                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                      >
+                          <span>{new Date(date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                          <Icon name="calendar-days" />
+                      </button>
+                  </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label htmlFor="ccPerson" className="block text-sm font-medium text-slate-300 mb-1">Pessoa *</label>
+                      <CustomSelect
+                        id="ccPerson"
+                        value={personId}
+                        onChange={setPersonId}
+                        placeholder="Selecione..."
+                        options={[{value: '', label: 'Selecione...'}, ...people.map(p => ({ value: p.id, label: p.name }))]}
+                      />
+                  </div>
+                  <div>
+                      <label htmlFor="ccCategory" className="block text-sm font-medium text-slate-300 mb-1">Categoria</label>
+                      <CustomSelect
+                        id="ccCategory"
+                        value={category}
+                        onChange={setCategory}
+                        placeholder="Selecione..."
+                        options={[{value: '', label: 'Selecione...'}, ...filteredCategories.map(c => ({ value: c.name, label: c.name }))]}
+                      />
+                  </div>
+              </div>
+              
+              {!isEditing && (
+                <div className="bg-slate-900/70 p-4 rounded-xl">
+                  <h3 className="text-lg font-semibold text-white mb-3">Parcelamento</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                          <label htmlFor="ccInstallments" className="block text-sm font-medium text-slate-300 mb-1">Nº de Parcelas</label>
+                          <input type="number" id="ccInstallments" value={installments} onChange={e => { setInstallments(e.target.value); setIsUserEditingInstallmentAmount(false); }}
+                              min="1" inputMode="numeric" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
+                      </div>
+                      <div>
+                          <label htmlFor="ccInstallmentAmount" className="block text-sm font-medium text-slate-300 mb-1">Valor da Parcela</label>
+                          <input type="number" id="ccInstallmentAmount" value={installmentAmount} 
+                                onChange={e => { setInstallmentAmount(e.target.value); setIsUserEditingInstallmentAmount(true); }}
+                                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
+                                placeholder="0,00" step="0.01" inputMode="decimal" required disabled={numInstallments <= 1} />
+                      </div>
+                  </div>
+                  {numInstallments > 1 && (
+                      <div className="bg-slate-800 p-4 rounded-lg space-y-2 mt-4 text-sm">
+                          <div className="flex justify-between text-slate-400"><span>Valor Original:</span><span className="text-slate-200 font-medium">{formatCurrencyLocal(numAmount)}</span></div>
+                          <div className="flex justify-between text-slate-400"><span>Valor com Juros:</span><span className="text-slate-200 font-medium">{formatCurrencyLocal(totalWithInterest)}</span></div>
+                          <div className="flex justify-between text-slate-400"><span>Juros:</span><span className={`font-medium ${interestAmount > 0.005 ? 'text-rose-400' : 'text-slate-200'}`}>{formatCurrencyLocal(interestAmount)} ({interestPercentage.toFixed(2).replace('.', ',')}%)</span></div>
+                          <div className="border-t border-slate-700 my-2 pt-2">
+                            <div className="flex justify-between text-slate-200 font-semibold text-base"><span>{numInstallments}x de:</span><span>{formatCurrencyLocal(numInstallmentAmount)}</span></div>
+                          </div>
+                      </div>
+                  )}
+                </div>
+              )}
+              
+              <div className="sm:col-span-2">
+                  <label htmlFor="ccNotes" className="block text-sm font-medium text-slate-300 mb-1">Observações</label>
+                  <textarea id="ccNotes" value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+                      className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
+              </div>
+          </form>
+        </div>
+
+        <div className="p-8 pt-6 flex justify-end space-x-3 flex-shrink-0">
+          <button type="button" onClick={onClose} className="px-5 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors font-semibold">Cancelar</button>
+          <button type="submit" form="card-tx-form" className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
+              {isEditing ? 'Salvar' : 'Criar'}
+          </button>
+        </div>
       </div>
     </div>
     {isDatePickerOpen && (

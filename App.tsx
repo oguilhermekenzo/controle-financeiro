@@ -21,7 +21,12 @@ import EmptyState from './components/EmptyState';
 
 
 // Mock Data
-const initialAccounts: Account[] = [];
+const initialAccounts: Account[] = [
+  { id: 'acc1', name: 'Conta Corrente Itaú', initialBalance: 1500 },
+  { id: 'acc2', name: 'Conta Poupança Santander', initialBalance: 8500 },
+  { id: 'acc3', name: 'Carteira', initialBalance: 350.75 },
+];
+
 const initialCategories: Category[] = [
   { id: '1', name: 'Alimentação', type: 'Saída' },
   { id: '2', name: 'Transporte', type: 'Saída' },
@@ -36,17 +41,54 @@ const initialCategories: Category[] = [
   { id: '11', name: 'Pagamento de Empréstimo', type: 'Saída' },
   { id: '12', name: 'Transferência' }, // Serve para ambos
 ];
+
 const initialCostCenters: CostCenter[] = [
   { id: '1', name: 'Projeto X' }, { id: '2', name: 'Viagem de Férias' },
 ];
-const initialGoals: Goal[] = [];
-const initialTransactions: Transaction[] = [];
-const initialPeople: Person[] = [];
-const initialCreditCards: CreditCard[] = [];
-const initialCreditCardTransactions: CreditCardTransaction[] = [];
-const initialRecurringTransactions: RecurringTransaction[] = [];
-const initialInvestments: Investment[] = [];
-const initialDebts: Debt[] = [];
+
+const initialGoals: Goal[] = [
+    { id: 'goal1', name: 'Viagem para a Europa', targetAmount: 20000, currentAmount: 7500 },
+    { id: 'goal2', name: 'Novo Computador', targetAmount: 8000, currentAmount: 6800 },
+];
+
+const initialTransactions: Transaction[] = [
+    { id: 'tx1', type: TransactionType.ENTRADA, description: 'Salário Mensal', amount: 7500, date: '2025-11-05', account: 'Conta Corrente Itaú', category: 'Salário' },
+    { id: 'tx2', type: TransactionType.SAIDA, description: 'Aluguel', amount: 1800, date: '2025-11-06', account: 'Conta Corrente Itaú', category: 'Moradia' },
+    { id: 'tx3', type: TransactionType.SAIDA, description: 'Aporte Meta: Viagem para a Europa', amount: 500, date: '2025-11-07', account: 'Conta Poupança Santander', category: 'Aporte em Meta' },
+    { id: 'tx4', type: TransactionType.ENTRADA, description: 'Freelance Website', amount: 1200, date: '2025-10-20', account: 'Conta Corrente Itaú', category: 'Outros' },
+    { id: 'tx5', type: TransactionType.SAIDA, description: 'Transferência para Carteira', amount: 200, date: '2025-11-01', account: 'Conta Corrente Itaú', category: 'Transferência' },
+    { id: 'tx6', type: TransactionType.ENTRADA, description: 'Transferência de C/C Itaú', amount: 200, date: '2025-11-01', account: 'Carteira', category: 'Transferência' },
+];
+
+const initialPeople: Person[] = [
+    { id: 'person1', name: 'Guilherme' },
+    { id: 'person2', name: 'Maria' },
+];
+
+const initialCreditCards: CreditCard[] = [
+    { id: 'card1', name: 'Itaú Signature', bank: Bank.ITAU, brand: CardBrand.VISA, last4Digits: '1234', limit: 10000, closingDay: 25, dueDate: 4, color: 'from-indigo-500 to-purple-600', accountId: 'acc1' },
+    { id: 'card2', name: 'Nubank Ultravioleta', bank: Bank.NUBANK, brand: CardBrand.MASTERCARD, last4Digits: '5678', limit: 15000, closingDay: 28, dueDate: 7, color: 'from-slate-500 to-slate-700', accountId: 'acc1' },
+];
+
+const initialCreditCardTransactions: CreditCardTransaction[] = [
+    { id: 'cctx1', cardId: 'card1', description: 'Restaurante Outback', amount: 250.50, date: '2025-10-28', personId: 'person1', category: 'Alimentação', paid: false },
+    { id: 'cctx2', cardId: 'card1', description: 'Spotify', amount: 21.90, date: '2025-11-10', personId: 'person1', category: 'Assinaturas', paid: false },
+    { id: 'cctx3', cardId: 'card2', description: 'Cinema', amount: 80, date: '2025-11-02', personId: 'person2', category: 'Lazer', paid: false },
+    { id: 'cctx4', cardId: 'card1', description: 'Compras Supermercado', amount: 430.70, date: '2025-11-15', personId: 'person1', category: 'Alimentação', paid: false },
+];
+
+const initialRecurringTransactions: RecurringTransaction[] = [
+    { id: 'rtx1', type: TransactionType.SAIDA, description: 'Netflix', amount: 39.90, account: 'Conta Corrente Itaú', category: 'Assinaturas', frequency: RecurringTransactionFrequency.MENSAL, dayOfMonth: 10, startDate: '2025-01-10', nextDueDate: '2025-12-10' },
+];
+
+const initialInvestments: Investment[] = [
+    { id: 'inv1', name: 'ITSA4', type: InvestmentType.ACOES, quantity: 200, unitPrice: 9.50, currentValue: 2100, acquisitionDate: '2024-03-15' },
+    { id: 'inv2', name: 'Tesouro Selic 2029', type: InvestmentType.RENDA_FIXA, quantity: 1, unitPrice: 12000, currentValue: 12800, acquisitionDate: '2024-01-20' },
+];
+
+const initialDebts: Debt[] = [
+    { id: 'debt1', name: 'Financiamento Apartamento', totalAmount: 250000, numberOfInstallments: 360, paidInstallments: 24, firstDueDate: '2023-12-25', accountId: 'acc1' }
+];
 
 
 type View = 'dashboard' | 'transactions' | 'goals' | 'analysis' | 'cards' | 'people' | 'accounts' | 'patrimonio';
@@ -75,6 +117,7 @@ const App: React.FC = () => {
   const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [isTransferModalOpen, setTransferModalOpen] = useState(false);
+  const [isMoreMenuOpen, setMoreMenuOpen] = useState(false);
 
   const [confirmationProps, setConfirmationProps] = useState({ onConfirm: () => {}, title: '', message: '', confirmText: 'Confirmar', confirmButtonClass: '' });
   
@@ -568,23 +611,8 @@ const App: React.FC = () => {
     };
 
     return (
-        <div className="space-y-8">
-            <div className="flex justify-between items-center flex-wrap gap-4">
-                <div className="flex items-center gap-2">
-                    {summaryPeriod === 'monthly' && (
-                        <>
-                           <button onClick={goToPreviousMonth} disabled={currentMonthIndex >= availableTransactionMonths.length - 1} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Icon name="chevron-left"/></button>
-                            <span className="font-semibold w-36 text-center capitalize">{availableTransactionMonths.length > 0 ? currentMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }) : 'Sem Dados'}</span>
-                           <button onClick={goToNextMonth} disabled={currentMonthIndex <= 0} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Icon name="chevron-right"/></button>
-                        </>
-                    )}
-                </div>
-                <div className="flex bg-slate-700/80 p-1 rounded-lg">
-                    <button onClick={() => setSummaryPeriod('monthly')} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${summaryPeriod === 'monthly' ? 'bg-indigo-600 text-white' : 'text-slate-300'}`}>Mensal</button>
-                    <button onClick={() => setSummaryPeriod('overall')} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${summaryPeriod === 'overall' ? 'bg-indigo-600 text-white' : 'text-slate-300'}`}>Geral</button>
-                </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div className="space-y-10 flex flex-col">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 order-1 sm:order-2">
                 <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
                     <h3 className="text-sm font-medium text-emerald-400 mb-1">Receita</h3>
                     <p className="text-3xl font-semibold text-white">{formatCurrency(totalIncome)}</p>
@@ -598,52 +626,69 @@ const App: React.FC = () => {
                     <p className="text-3xl font-semibold text-white">{formatCurrency(balance)}</p>
                 </div>
             </div>
+             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 order-2 sm:order-1">
+                <div className="flex items-center gap-2">
+                    {summaryPeriod === 'monthly' && (
+                        <>
+                           <button onClick={goToPreviousMonth} disabled={currentMonthIndex >= availableTransactionMonths.length - 1} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Icon name="chevron-left"/></button>
+                            <span className="font-semibold w-28 sm:w-36 text-center capitalize text-sm sm:text-base">{availableTransactionMonths.length > 0 ? currentMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' }) : 'Sem Dados'}</span>
+                           <button onClick={goToNextMonth} disabled={currentMonthIndex <= 0} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><Icon name="chevron-right"/></button>
+                        </>
+                    )}
+                </div>
+                <div className="flex bg-slate-700/80 p-1 rounded-lg">
+                    <button onClick={() => setSummaryPeriod('monthly')} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${summaryPeriod === 'monthly' ? 'bg-indigo-600 text-white' : 'text-slate-300'}`}>Mensal</button>
+                    <button onClick={() => setSummaryPeriod('overall')} className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${summaryPeriod === 'overall' ? 'bg-indigo-600 text-white' : 'text-slate-300'}`}>Geral</button>
+                </div>
+            </div>
 
-            {!hasData ? (
-                 <div className="flex flex-col items-center justify-center h-80 bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl text-center">
-                    <Icon name="folder-open" className="text-6xl text-slate-600 mb-4" />
-                    <h3 className="text-xl font-bold text-white">Sem dados para exibir o dashboard</h3>
-                    <p className="text-slate-400 mt-2">Adicione seu primeiro lançamento para começar a ver os gráficos.</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
-                        <h2 className="text-xl font-bold text-white mb-4">Despesas por Categoria</h2>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie 
-                                    data={expenseData} 
-                                    dataKey="value" 
-                                    nameKey="name" 
-                                    cx="50%" 
-                                    cy="50%" 
-                                    outerRadius={80} 
-                                    fill="#8884d8" 
-                                    labelLine={areValuesVisible}
-                                    label={areValuesVisible ? renderCustomizedPieLabel : false}
-                                >
-                                    {expenseData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                                </Pie>
-                                <Tooltip formatter={chartTooltipFormatter} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
-                        <h2 className="text-xl font-bold text-white mb-4">Receitas vs Despesas</h2>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={[{ name: 'Fluxo de Caixa', Receitas: totalIncome, Despesas: totalExpenses + filteredCreditCardTransactions.reduce((acc, t) => acc + t.amount, 0) }]}>
-                                <XAxis dataKey="name" stroke="#94a3b8" />
-                                <YAxis stroke="#94a3b8" tickFormatter={(value) => areValuesVisible ? `R$ ${value/1000}k` : ''} />
-                                <Tooltip formatter={chartTooltipFormatter} cursor={{fill: 'rgba(100, 116, 139, 0.1)'}} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
-                                <Legend />
-                                <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            )}
+            <div className="order-3">
+              {!hasData ? (
+                  <div className="flex flex-col items-center justify-center h-80 bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl text-center">
+                      <Icon name="folder-open" className="text-6xl text-slate-600 mb-4" />
+                      <h3 className="text-xl font-bold text-white">Sem dados para exibir o dashboard</h3>
+                      <p className="text-slate-400 mt-2">Adicione seu primeiro lançamento para começar a ver os gráficos.</p>
+                  </div>
+              ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                          <h2 className="text-xl font-bold text-white mb-4">Despesas por Categoria</h2>
+                          <ResponsiveContainer width="100%" height={300}>
+                              <PieChart>
+                                  <Pie 
+                                      data={expenseData} 
+                                      dataKey="value" 
+                                      nameKey="name" 
+                                      cx="50%" 
+                                      cy="50%" 
+                                      outerRadius={80} 
+                                      fill="#8884d8" 
+                                      labelLine={areValuesVisible}
+                                      label={areValuesVisible ? renderCustomizedPieLabel : false}
+                                  >
+                                      {expenseData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                  </Pie>
+                                  <Tooltip formatter={chartTooltipFormatter} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
+                                  <Legend />
+                              </PieChart>
+                          </ResponsiveContainer>
+                      </div>
+                      <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                          <h2 className="text-xl font-bold text-white mb-4">Receitas vs Despesas</h2>
+                          <ResponsiveContainer width="100%" height={300}>
+                              <BarChart data={[{ name: 'Fluxo de Caixa', Receitas: totalIncome, Despesas: totalExpenses + filteredCreditCardTransactions.reduce((acc, t) => acc + t.amount, 0) }]}>
+                                  <XAxis dataKey="name" stroke="#94a3b8" />
+                                  <YAxis stroke="#94a3b8" tickFormatter={(value) => areValuesVisible ? `R$ ${value/1000}k` : ''} />
+                                  <Tooltip formatter={chartTooltipFormatter} cursor={{fill: 'rgba(100, 116, 139, 0.1)'}} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
+                                  <Legend />
+                                  <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                  <Bar dataKey="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                              </BarChart>
+                          </ResponsiveContainer>
+                      </div>
+                  </div>
+              )}
+            </div>
         </div>
     );
   };
@@ -971,7 +1016,7 @@ const App: React.FC = () => {
            </h2>
            <form onSubmit={handleAddOrUpdatePerson} className="flex gap-3 mb-6">
                <input type="text" value={newPersonName} onChange={e => setNewPersonName(e.target.value)} placeholder="Nome da pessoa"
-                      className="flex-grow bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+                      className="flex-grow min-w-0 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
                <button type="submit" className="bg-indigo-600 text-white font-semibold px-5 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
                 {editingTarget && editingTarget.type === 'person' ? 'Salvar' : 'Adicionar'}
                </button>
@@ -1306,9 +1351,11 @@ const App: React.FC = () => {
                                                 <td className="py-4 px-4 font-medium text-white">{inv.name}</td>
                                                 <td className="py-4 px-4 text-slate-300">{inv.type}</td>
                                                 <td className="py-4 px-4 hidden md:table-cell font-bold text-cyan-300">{formatCurrency(inv.currentValue)}</td>
-                                                <td className="py-4 px-4 space-x-4 text-right">
-                                                    <button onClick={() => openEditModal(inv, 'investment')} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
-                                                    <button onClick={() => { setDeletionTarget({ id: inv.id, type: 'investment' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                                                <td className="py-4 px-4 text-right">
+                                                    <div className="flex items-center justify-end gap-4">
+                                                        <button onClick={() => openEditModal(inv, 'investment')} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
+                                                        <button onClick={() => { setDeletionTarget({ id: inv.id, type: 'investment' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
@@ -1351,9 +1398,11 @@ const App: React.FC = () => {
                                                     </td>
                                                     <td className="py-4 px-4 hidden md:table-cell text-slate-300">{formatCurrency(debt.totalAmount)}</td>
                                                     <td className="py-4 px-4 font-bold text-amber-300">{formatCurrency(remainingAmount)}</td>
-                                                    <td className="py-4 px-4 space-x-4 text-right">
-                                                        <button onClick={(e) => { e.stopPropagation(); openEditModal(debt, 'debt'); }} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
-                                                        <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: debt.id, type: 'debt' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                                                    <td className="py-4 px-4 text-right">
+                                                        <div className="flex items-center justify-end gap-4">
+                                                            <button onClick={(e) => { e.stopPropagation(); openEditModal(debt, 'debt'); }} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: debt.id, type: 'debt' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 {isExpanded && (
@@ -1371,7 +1420,7 @@ const App: React.FC = () => {
                                                                     dueDate.setMonth(dueDate.getMonth() + i);
 
                                                                     return (
-                                                                        <div key={i} className="flex justify-between items-center bg-slate-800 p-2.5 rounded-lg text-sm">
+                                                                        <div key={i} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-slate-800 p-2.5 rounded-lg text-sm">
                                                                             <div>
                                                                                 <span className={`font-semibold ${isPaid ? 'text-slate-400 line-through' : 'text-white'}`}>
                                                                                     {installmentNumber}ª Parcela
@@ -1441,6 +1490,8 @@ const App: React.FC = () => {
     patrimonio: 'Gestão de Patrimônio'
   };
 
+  const moreMenuViews: View[] = ['patrimonio', 'accounts', 'goals', 'people', 'analysis'];
+
   return (
     <div className="flex h-screen bg-slate-900 text-slate-200 font-sans">
       <aside className="w-64 bg-slate-800/50 border-r border-slate-700/50 p-6 flex-shrink-0 hidden md:flex flex-col">
@@ -1468,7 +1519,7 @@ const App: React.FC = () => {
       </aside>
       
       <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 overflow-y-auto">
-         <header className="flex justify-between items-center mb-8">
+         <header className="flex justify-between items-center mb-4">
             <h2 className="text-3xl font-bold text-white">{viewTitles[activeView]}</h2>
             <button onClick={() => setAreValuesVisible(prev => !prev)} className="text-slate-400 hover:text-white transition-colors" title={areValuesVisible ? "Ocultar valores" : "Mostrar valores"}>
                 <Icon name={areValuesVisible ? "eye" : "eye-slash"} className="text-2xl" />
@@ -1495,8 +1546,35 @@ const App: React.FC = () => {
         <button onClick={() => setActiveView('transactions')} className={`p-2 rounded-lg flex flex-col items-center text-xs ${activeView === 'transactions' ? 'text-indigo-400' : 'text-slate-400'}`}><Icon name="exchange-alt" className="text-xl mb-1" /><span>Lançar</span></button>
         <button onClick={() => setTxModalOpen(true)} className="p-3 -translate-y-4 bg-indigo-600 rounded-full text-white shadow-lg shadow-indigo-600/40"><Icon name="plus" className="text-2xl" /></button>
         <button onClick={() => setActiveView('cards')} className={`p-2 rounded-lg flex flex-col items-center text-xs ${activeView === 'cards' ? 'text-indigo-400' : 'text-slate-400'}`}><Icon name="credit-card" className="text-xl mb-1" /><span>Cartões</span></button>
-        <button onClick={() => setActiveView('patrimonio')} className={`p-2 rounded-lg flex flex-col items-center text-xs ${activeView === 'patrimonio' ? 'text-indigo-400' : 'text-slate-400'}`}><Icon name="landmark" className="text-xl mb-1" /><span>Patrimônio</span></button>
+        <button onClick={() => setMoreMenuOpen(true)} className={`p-2 rounded-lg flex flex-col items-center text-xs ${moreMenuViews.includes(activeView) ? 'text-indigo-400' : 'text-slate-400'}`}><Icon name="ellipsis" className="text-xl mb-1" /><span>Mais</span></button>
       </div>
+      
+      {isMoreMenuOpen && (
+        <>
+            <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMoreMenuOpen(false)}></div>
+            <div className="fixed bottom-20 right-4 bg-slate-800 border border-slate-700 rounded-xl shadow-lg w-56 p-2 z-50 animate-fade-in-up md:hidden" style={{ animationDuration: '200ms' }}>
+                <ul className="space-y-1">
+                    {[
+                      { view: 'patrimonio', icon: 'landmark', label: 'Patrimônio' },
+                      { view: 'accounts', icon: 'wallet', label: 'Contas' },
+                      { view: 'goals', icon: 'bullseye', label: 'Metas' },
+                      { view: 'people', icon: 'users', label: 'Pessoas' },
+                      { view: 'analysis', icon: 'wand-magic-sparkles', label: 'Análise IA' }
+                    ].map(item => (
+                        <li key={item.view}>
+                            <button 
+                                onClick={() => { setActiveView(item.view as View); setMoreMenuOpen(false); }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-colors ${activeView === item.view ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-700'}`}
+                            >
+                                <Icon name={item.icon} className="w-5 h-5" />
+                                <span>{item.label}</span>
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </>
+      )}
 
       <AddTransactionModal 
         isOpen={isTxModalOpen} 
