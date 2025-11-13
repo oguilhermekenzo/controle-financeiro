@@ -17,6 +17,7 @@ import DebtModal from './components/DebtModal';
 import ImportStatementModal from './components/ImportStatementModal';
 import CustomDatePicker from './components/CustomDatePicker';
 import TransferModal from './components/TransferModal';
+import EmptyState from './components/EmptyState';
 
 
 // Mock Data
@@ -684,61 +685,81 @@ const App: React.FC = () => {
         </div>
 
        {transactionsSubView === 'current' ? (
-        <div className="overflow-x-auto">
-            <table className="w-full text-left">
-                <thead>
-                    <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
-                        <th className="py-3 px-4 font-medium">Descrição</th> <th className="py-3 px-4 font-medium">Valor</th>
-                        <th className="py-3 px-4 hidden md:table-cell font-medium">Data</th> <th className="py-3 px-4 hidden lg:table-cell font-medium">Categoria</th>
-                        <th className="py-3 px-4 hidden lg:table-cell font-medium">Conta</th>
-                        <th className="py-3 px-4 font-medium text-right">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {displayTransactions.map(t => (
-                        <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800">
-                            <td className="py-4 px-4 font-medium text-white">{t.description}</td>
-                            <td className={`py-4 px-4 font-bold ${t.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(t.amount)} </td>
-                            <td className="py-4 px-4 text-slate-300 hidden md:table-cell">{new Date(t.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-                            <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{t.category}</td>
-                            <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{t.account}</td>
-                            <td className="py-4 px-4 space-x-4 text-right">
-                                <button onClick={() => openEditModal(t, 'transaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
-                                <button onClick={() => { setDeletionTarget({ id: t.id, type: 'transaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+        <>
+            {displayTransactions.length > 0 ? (
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
+                                <th className="py-3 px-4 font-medium">Descrição</th> <th className="py-3 px-4 font-medium">Valor</th>
+                                <th className="py-3 px-4 hidden md:table-cell font-medium">Data</th> <th className="py-3 px-4 hidden lg:table-cell font-medium">Categoria</th>
+                                <th className="py-3 px-4 hidden lg:table-cell font-medium">Conta</th>
+                                <th className="py-3 px-4 font-medium text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {displayTransactions.map(t => (
+                                <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800">
+                                    <td className="py-4 px-4 font-medium text-white">{t.description}</td>
+                                    <td className={`py-4 px-4 font-bold ${t.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(t.amount)} </td>
+                                    <td className="py-4 px-4 text-slate-300 hidden md:table-cell">{new Date(t.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                                    <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{t.category}</td>
+                                    <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{t.account}</td>
+                                    <td className="py-4 px-4 space-x-4 text-right">
+                                        <button onClick={() => openEditModal(t, 'transaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
+                                        <button onClick={() => { setDeletionTarget({ id: t.id, type: 'transaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <EmptyState 
+                    icon="exchange-alt" 
+                    title="Nenhum Lançamento" 
+                    message="Ainda não há lançamentos para o período selecionado. Adicione um novo para começar." 
+                />
+            )}
+        </>
        ) : (
-        <div className="overflow-x-auto">
-             <table className="w-full text-left">
-                <thead>
-                    <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
-                        <th className="py-3 px-4 font-medium">Descrição</th> <th className="py-3 px-4 font-medium">Valor</th>
-                        <th className="py-3 px-4 hidden md:table-cell font-medium">Frequência</th> <th className="py-3 px-4 hidden lg:table-cell font-medium">Próximo Vencimento</th>
-                        <th className="py-3 px-4 hidden lg:table-cell font-medium">Conta</th>
-                        <th className="py-3 px-4 font-medium text-right">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {recurringTransactions.map(rt => (
-                         <tr key={rt.id} className="border-b border-slate-800 hover:bg-slate-800">
-                           <td className="py-4 px-4 font-medium text-white">{rt.description}</td>
-                           <td className={`py-4 px-4 font-bold ${rt.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(rt.amount)} </td>
-                           <td className="py-4 px-4 text-slate-300 hidden md:table-cell">{rt.frequency}</td>
-                           <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{new Date(rt.nextDueDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-                           <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{rt.account}</td>
-                           <td className="py-4 px-4 space-x-4 text-right">
-                               <button onClick={() => openEditModal(rt, 'recurringTransaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
-                               <button onClick={() => { setDeletionTarget({ id: rt.id, type: 'recurringTransaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
-                           </td>
-                       </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+        <>
+            {recurringTransactions.length > 0 ? (
+                <div className="overflow-x-auto">
+                     <table className="w-full text-left">
+                        <thead>
+                            <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
+                                <th className="py-3 px-4 font-medium">Descrição</th> <th className="py-3 px-4 font-medium">Valor</th>
+                                <th className="py-3 px-4 hidden md:table-cell font-medium">Frequência</th> <th className="py-3 px-4 hidden lg:table-cell font-medium">Próximo Vencimento</th>
+                                <th className="py-3 px-4 hidden lg:table-cell font-medium">Conta</th>
+                                <th className="py-3 px-4 font-medium text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {recurringTransactions.map(rt => (
+                                 <tr key={rt.id} className="border-b border-slate-800 hover:bg-slate-800">
+                                   <td className="py-4 px-4 font-medium text-white">{rt.description}</td>
+                                   <td className={`py-4 px-4 font-bold ${rt.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(rt.amount)} </td>
+                                   <td className="py-4 px-4 text-slate-300 hidden md:table-cell">{rt.frequency}</td>
+                                   <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{new Date(rt.nextDueDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                                   <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{rt.account}</td>
+                                   <td className="py-4 px-4 space-x-4 text-right">
+                                       <button onClick={() => openEditModal(rt, 'recurringTransaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
+                                       <button onClick={() => { setDeletionTarget({ id: rt.id, type: 'recurringTransaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+                                   </td>
+                               </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <EmptyState 
+                    icon="calendar-days" 
+                    title="Nenhum Lançamento Recorrente" 
+                    message="Você ainda não cadastrou nenhuma despesa ou receita recorrente." 
+                />
+            )}
+        </>
        )}
      </div>
     );
@@ -752,36 +773,44 @@ const App: React.FC = () => {
                 <Icon name="plus" className="mr-2"/> Nova Meta
             </button>
        </div>
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {goals.map(goal => {
-            const progress = (goal.currentAmount / goal.targetAmount) * 100;
-            return (
-              <div key={goal.id} className="bg-slate-800 p-5 rounded-xl border border-slate-700">
-                <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <h3 className="font-bold text-white text-lg">{goal.name}</h3>
-                        <p className="text-sm text-slate-300">
-                            <span className="font-bold text-white">{formatCurrency(goal.currentAmount)}</span> / {formatCurrency(goal.targetAmount)}
-                        </p>
+       {goals.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {goals.map(goal => {
+                const progress = (goal.currentAmount / goal.targetAmount) * 100;
+                return (
+                  <div key={goal.id} className="bg-slate-800 p-5 rounded-xl border border-slate-700">
+                    <div className="flex justify-between items-start mb-2">
+                        <div>
+                            <h3 className="font-bold text-white text-lg">{goal.name}</h3>
+                            <p className="text-sm text-slate-300">
+                                <span className="font-bold text-white">{formatCurrency(goal.currentAmount)}</span> / {formatCurrency(goal.targetAmount)}
+                            </p>
+                        </div>
+                        <div className="flex gap-2">
+                             <button onClick={() => openEditModal(goal, 'goal')} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
+                             <button onClick={() => { setDeletionTarget({ id: goal.id, type: 'goal' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                        </div>
                     </div>
-                    <div className="flex gap-2">
-                         <button onClick={() => openEditModal(goal, 'goal')} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
-                         <button onClick={() => { setDeletionTarget({ id: goal.id, type: 'goal' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                    <div className="w-full bg-slate-700 rounded-full h-3 mb-2">
+                      <div className="bg-indigo-500 h-3 rounded-full" style={{ width: `${progress > 100 ? 100 : progress}%` }}></div>
                     </div>
-                </div>
-                <div className="w-full bg-slate-700 rounded-full h-3 mb-2">
-                  <div className="bg-indigo-500 h-3 rounded-full" style={{ width: `${progress > 100 ? 100 : progress}%` }}></div>
-                </div>
-                <div className="flex justify-between items-center">
-                    <p className="text-sm font-bold text-indigo-400">{progress.toFixed(1)}%</p>
-                    <button onClick={() => { setTargetGoal(goal); setAddValueModalOpen(true); }} className="bg-emerald-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md hover:bg-emerald-700">
-                        <Icon name="plus" className="mr-1.5"/> Adicionar Valor
-                    </button>
-                </div>
-              </div>
-            );
-          })}
-       </div>
+                    <div className="flex justify-between items-center">
+                        <p className="text-sm font-bold text-indigo-400">{progress.toFixed(1)}%</p>
+                        <button onClick={() => { setTargetGoal(goal); setAddValueModalOpen(true); }} className="bg-emerald-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md hover:bg-emerald-700">
+                            <Icon name="plus" className="mr-1.5"/> Adicionar Valor
+                        </button>
+                    </div>
+                  </div>
+                );
+              })}
+           </div>
+       ) : (
+            <EmptyState 
+                icon="bullseye" 
+                title="Nenhuma Meta Cadastrada" 
+                message="Crie sua primeira meta de economia para acompanhar seu progresso." 
+            />
+       )}
      </div>
   );
   
@@ -877,29 +906,37 @@ const App: React.FC = () => {
                     : 'Saldos Atuais'}
             </h3>
 
-            <ul className="space-y-3">
-                {projectedBalances.map(acc => (
-                    <li key={acc.id} className="group flex justify-between items-center bg-slate-800 p-4 rounded-lg text-white">
-                         <div>
-                            <span className="font-bold text-lg">{acc.name}</span>
-                            {!acc.isProjected &&
-                                <p className="text-xs text-slate-400">Saldo Inicial: {formatCurrency(acc.initialBalance)}</p>
-                            }
-                         </div>
-                         <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <span className={`font-bold text-xl ${acc.currentBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(acc.currentBalance)}</span>
-                            </div>
-                            {!acc.isProjected &&
-                                <div className="space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onClick={() => openEditModal(acc, 'account')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
-                                    <button onClick={() => { setDeletionTarget({ id: acc.id, type: 'account' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+            {projectedBalances.length > 0 ? (
+                <ul className="space-y-3">
+                    {projectedBalances.map(acc => (
+                        <li key={acc.id} className="group flex justify-between items-center bg-slate-800 p-4 rounded-lg text-white">
+                             <div>
+                                <span className="font-bold text-lg">{acc.name}</span>
+                                {!acc.isProjected &&
+                                    <p className="text-xs text-slate-400">Saldo Inicial: {formatCurrency(acc.initialBalance)}</p>
+                                }
+                             </div>
+                             <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <span className={`font-bold text-xl ${acc.currentBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(acc.currentBalance)}</span>
                                 </div>
-                            }
-                         </div>
-                    </li>
-                ))}
-            </ul>
+                                {!acc.isProjected &&
+                                    <div className="space-x-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => openEditModal(acc, 'account')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
+                                        <button onClick={() => { setDeletionTarget({ id: acc.id, type: 'account' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+                                    </div>
+                                }
+                             </div>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <EmptyState
+                    icon="wallet"
+                    title="Nenhuma Conta Cadastrada"
+                    message="Adicione sua primeira conta bancária ou carteira para começar a organizar suas finanças."
+                />
+            )}
         </div>
     );
   }
@@ -944,17 +981,25 @@ const App: React.FC = () => {
                 </button>
                )}
            </form>
-           <ul className="space-y-2">
-               {people.map(p => (
-                   <li key={p.id} className="flex justify-between items-center bg-slate-800 p-4 rounded-lg text-white">
-                        <span className="font-medium">{p.name}</span>
-                        <div className="space-x-4">
-                            <button onClick={() => openEditModal(p, 'person')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
-                            <button onClick={() => { setDeletionTarget({ id: p.id, type: 'person' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
-                        </div>
-                   </li>
-               ))}
-           </ul>
+            {people.length > 0 ? (
+               <ul className="space-y-2">
+                   {people.map(p => (
+                       <li key={p.id} className="flex justify-between items-center bg-slate-800 p-4 rounded-lg text-white">
+                            <span className="font-medium">{p.name}</span>
+                            <div className="space-x-4">
+                                <button onClick={() => openEditModal(p, 'person')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
+                                <button onClick={() => { setDeletionTarget({ id: p.id, type: 'person' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+                            </div>
+                       </li>
+                   ))}
+               </ul>
+            ) : (
+                <EmptyState
+                    icon="users"
+                    title="Nenhuma Pessoa Cadastrada"
+                    message="Adicione pessoas para dividir despesas no cartão de crédito e organizar os gastos."
+                />
+            )}
         </div>
       );
   }
@@ -1096,97 +1141,109 @@ const App: React.FC = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {creditCards.map(card => (
-                    <div key={card.id} onClick={() => setSelectedCardId(card.id)}
-                         className={`group relative p-6 rounded-2xl cursor-pointer text-white shadow-lg bg-gradient-to-br transition-all duration-300 ${card.color} ${selectedCardId === card.id ? 'ring-2 ring-white/50 scale-100' : 'scale-95 hover:scale-100 opacity-70 hover:opacity-100'} h-52 flex flex-col justify-between`}>
-                        
-                        <div className="flex justify-between items-start">
-                           <span className="font-bold text-lg text-white/90">{card.name}</span>
-                           <span className="font-semibold text-white/80">{card.brand}</span>
-                        </div>
-                        
-                        <div>
-                            <p className="font-mono tracking-widest text-2xl text-center mb-4 opacity-80">**** **** **** {card.last4Digits}</p>
-                            <div className="flex justify-between items-end">
-                                <p className="font-bold text-lg">{card.bank}</p>
-                                <div className={`flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${selectedCardId === card.id ? 'opacity-100' : ''}`}>
-                                   <button onClick={(e) => { e.stopPropagation(); openEditModal(card, 'card')}} className="text-white/80 hover:text-white/100 backdrop-blur-sm bg-black/20 rounded-full w-9 h-9 flex items-center justify-center transition-colors"><Icon name="pencil"/></button>
-                                   <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: card.id, type: 'card' }); setConfirmationModalOpen(true); }} className="text-white/80 hover:text-white/100 backdrop-blur-sm bg-black/20 rounded-full w-9 h-9 flex items-center justify-center transition-colors"><Icon name="trash"/></button>
+            {creditCards.length > 0 ? (
+                <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {creditCards.map(card => (
+                            <div key={card.id} onClick={() => setSelectedCardId(card.id)}
+                                 className={`group relative p-6 rounded-2xl cursor-pointer text-white shadow-lg bg-gradient-to-br transition-all duration-300 ${card.color} ${selectedCardId === card.id ? 'ring-2 ring-white/50 scale-100' : 'scale-95 hover:scale-100 opacity-70 hover:opacity-100'} h-52 flex flex-col justify-between`}>
+                                
+                                <div className="flex justify-between items-start">
+                                   <span className="font-bold text-lg text-white/90">{card.name}</span>
+                                   <span className="font-semibold text-white/80">{card.brand}</span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {selectedCard && (
-                <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-                       <div className="flex-1">
-                            <h3 className="text-xl font-bold text-white">Fatura de {selectedCard.name}</h3>
-                            <div className="flex items-center gap-2 mt-2">
-                                <button onClick={() => setCurrentCardMonthIndex(prev => prev + 1)} disabled={currentCardMonthIndex >= availableMonths.length - 1} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-left"/></button>
-                                <span className="font-semibold w-36 text-center capitalize">{availableMonths.length > 0 ? statementDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'Sem Faturas'}</span>
-                                <button onClick={() => setCurrentCardMonthIndex(prev => prev - 1)} disabled={currentCardMonthIndex <= 0} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-right"/></button>
-                            </div>
-                       </div>
-                       <div className="text-left sm:text-right">
-                            <p className="text-slate-300">Total da Fatura: <span className={`font-bold text-3xl ${isStatementPaid ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(total)}</span></p>
-                            <p className="text-sm text-slate-400">Fecha em: {statementClosingDate?.getDate()}/{statementClosingDate && statementClosingDate.getMonth() + 1} | Vence em: {statementDueDate?.getDate()}/{statementDueDate && statementDueDate.getMonth() + 1}</p>
-                       </div>
-                    </div>
-                     <div className="mb-6">
-                        <div className="flex justify-between text-sm text-slate-400 mb-1">
-                            <span>Limite Utilizado (Total: {formatCurrency(selectedCard.limit)})</span>
-                            <span>Disponível</span>
-                        </div>
-                        <div className="w-full bg-slate-700 rounded-full h-2.5">
-                            <div className="bg-rose-500 h-2.5 rounded-full" style={{ width: `${(usedLimit / selectedCard.limit) * 100}%` }}></div>
-                        </div>
-                        <div className="flex justify-between text-sm font-bold text-white mt-1">
-                            <span>{formatCurrency(usedLimit)}</span>
-                            <span>{formatCurrency(availableLimit)}</span>
-                        </div>
-                    </div>
-                    <div className="flex gap-4 justify-end mb-6">
-                        <button onClick={triggerPayInvoiceConfirmation} disabled={isStatementPaid || statementTransactions.length === 0} className={`font-semibold px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${isStatementPaid ? 'bg-emerald-600/50 cursor-default' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
-                           <Icon name={isStatementPaid ? "check-circle" : "dollar-sign"} className="mr-2"/> {isStatementPaid ? 'Fatura Paga' : 'Pagar Fatura'}
-                        </button>
-                        <button onClick={() => openAddCardTransactionModal(selectedCard.id)} className="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center justify-center">
-                            <Icon name="plus" className="mr-2"/> Novo Gasto
-                        </button>
-                    </div>
-                     {totalByPerson.length > 0 &&
-                        <div className="mb-6 p-4 bg-slate-900/50 rounded-xl">
-                             <h4 className="font-semibold text-white mb-2">Gastos por Pessoa</h4>
-                             <ul className="space-y-1 text-sm">
-                                {totalByPerson.map(p => (
-                                    <li key={p.name} className="flex justify-between text-slate-300">
-                                        <span>{p.name}</span>
-                                        <span className="font-medium text-white">{formatCurrency(p.amount)}</span>
-                                    </li>
-                                ))}
-                             </ul>
-                        </div>
-                     }
-                    <div className="space-y-3">
-                        {statementTransactions.length > 0 ? statementTransactions.map(t => (
-                            <div key={t.id} className="flex justify-between items-center bg-slate-800 p-4 rounded-lg group">
+                                
                                 <div>
-                                    <p className="font-semibold text-white">{t.description}</p>
-                                    <p className="text-sm text-slate-400">{new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR')} - {t.category}</p>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <p className={`font-bold ${t.paid ? 'text-emerald-400' : areValuesVisible ? 'text-rose-400' : 'text-slate-200'}`}>{formatCurrency(t.amount)}</p>
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity space-x-2">
-                                        <button onClick={() => openEditModal(t, 'cardTransaction')} className="text-slate-400 hover:text-indigo-400 transition-colors" disabled={t.paid}><Icon name="pencil"/></button>
-                                        <button onClick={() => { setDeletionTarget({ id: t.id, type: 'cardTransaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors" disabled={t.paid}><Icon name="trash"/></button>
+                                    <p className="font-mono tracking-widest text-2xl text-center mb-4 opacity-80">**** **** **** {card.last4Digits}</p>
+                                    <div className="flex justify-between items-end">
+                                        <p className="font-bold text-lg">{card.bank}</p>
+                                        <div className={`flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ${selectedCardId === card.id ? 'opacity-100' : ''}`}>
+                                           <button onClick={(e) => { e.stopPropagation(); openEditModal(card, 'card')}} className="text-white/80 hover:text-white/100 backdrop-blur-sm bg-black/20 rounded-full w-9 h-9 flex items-center justify-center transition-colors"><Icon name="pencil"/></button>
+                                           <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: card.id, type: 'card' }); setConfirmationModalOpen(true); }} className="text-white/80 hover:text-white/100 backdrop-blur-sm bg-black/20 rounded-full w-9 h-9 flex items-center justify-center transition-colors"><Icon name="trash"/></button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        )) : <p className="text-center text-slate-400 py-6">Nenhum lançamento nesta fatura.</p>}
+                        ))}
                     </div>
+
+                    {selectedCard && (
+                        <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+                               <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-white">Fatura de {selectedCard.name}</h3>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <button onClick={() => setCurrentCardMonthIndex(prev => prev + 1)} disabled={currentCardMonthIndex >= availableMonths.length - 1} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-left"/></button>
+                                        <span className="font-semibold w-36 text-center capitalize">{availableMonths.length > 0 ? statementDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'Sem Faturas'}</span>
+                                        <button onClick={() => setCurrentCardMonthIndex(prev => prev - 1)} disabled={currentCardMonthIndex <= 0} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-right"/></button>
+                                    </div>
+                               </div>
+                               <div className="text-left sm:text-right">
+                                    <p className="text-slate-300">Total da Fatura: <span className={`font-bold text-3xl ${isStatementPaid ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(total)}</span></p>
+                                    <p className="text-sm text-slate-400">Fecha em: {statementClosingDate?.getDate()}/{statementClosingDate && statementClosingDate.getMonth() + 1} | Vence em: {statementDueDate?.getDate()}/{statementDueDate && statementDueDate.getMonth() + 1}</p>
+                               </div>
+                            </div>
+                             <div className="mb-6">
+                                <div className="flex justify-between text-sm text-slate-400 mb-1">
+                                    <span>Limite Utilizado (Total: {formatCurrency(selectedCard.limit)})</span>
+                                    <span>Disponível</span>
+                                </div>
+                                <div className="w-full bg-slate-700 rounded-full h-2.5">
+                                    <div className="bg-rose-500 h-2.5 rounded-full" style={{ width: `${(usedLimit / selectedCard.limit) * 100}%` }}></div>
+                                </div>
+                                <div className="flex justify-between text-sm font-bold text-white mt-1">
+                                    <span>{formatCurrency(usedLimit)}</span>
+                                    <span>{formatCurrency(availableLimit)}</span>
+                                </div>
+                            </div>
+                            <div className="flex gap-4 justify-end mb-6">
+                                <button onClick={triggerPayInvoiceConfirmation} disabled={isStatementPaid || statementTransactions.length === 0} className={`font-semibold px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${isStatementPaid ? 'bg-emerald-600/50 cursor-default' : 'bg-emerald-600 hover:bg-emerald-700'}`}>
+                                   <Icon name={isStatementPaid ? "check-circle" : "dollar-sign"} className="mr-2"/> {isStatementPaid ? 'Fatura Paga' : 'Pagar Fatura'}
+                                </button>
+                                <button onClick={() => openAddCardTransactionModal(selectedCard.id)} className="bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center justify-center">
+                                    <Icon name="plus" className="mr-2"/> Novo Gasto
+                                </button>
+                            </div>
+                             {totalByPerson.length > 0 &&
+                                <div className="mb-6 p-4 bg-slate-900/50 rounded-xl">
+                                     <h4 className="font-semibold text-white mb-2">Gastos por Pessoa</h4>
+                                     <ul className="space-y-1 text-sm">
+                                        {totalByPerson.map(p => (
+                                            <li key={p.name} className="flex justify-between text-slate-300">
+                                                <span>{p.name}</span>
+                                                <span className="font-medium text-white">{formatCurrency(p.amount)}</span>
+                                            </li>
+                                        ))}
+                                     </ul>
+                                </div>
+                             }
+                            <div className="space-y-3">
+                                {statementTransactions.length > 0 ? statementTransactions.map(t => (
+                                    <div key={t.id} className="flex justify-between items-center bg-slate-800 p-4 rounded-lg group">
+                                        <div>
+                                            <p className="font-semibold text-white">{t.description}</p>
+                                            <p className="text-sm text-slate-400">{new Date(t.date + 'T12:00:00').toLocaleDateString('pt-BR')} - {t.category}</p>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <p className={`font-bold ${t.paid ? 'text-emerald-400' : areValuesVisible ? 'text-rose-400' : 'text-slate-200'}`}>{formatCurrency(t.amount)}</p>
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity space-x-2">
+                                                <button onClick={() => openEditModal(t, 'cardTransaction')} className="text-slate-400 hover:text-indigo-400 transition-colors" disabled={t.paid}><Icon name="pencil"/></button>
+                                                <button onClick={() => { setDeletionTarget({ id: t.id, type: 'cardTransaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors" disabled={t.paid}><Icon name="trash"/></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )) : <p className="text-center text-slate-400 py-6">Nenhum lançamento nesta fatura.</p>}
+                            </div>
+                        </div>
+                    )}
+                </>
+            ) : (
+                <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                    <EmptyState
+                        icon="credit-card"
+                        title="Nenhum Cartão Cadastrado"
+                        message="Adicione seu primeiro cartão de crédito para começar a registrar e acompanhar seus gastos."
+                    />
                 </div>
             )}
         </div>
@@ -1231,116 +1288,136 @@ const App: React.FC = () => {
                 </div>
 
                 {patrimonioSubView === 'investments' ? (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                           <thead>
-                                <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
-                                    <th className="py-3 px-4 font-medium">Ativo</th>
-                                    <th className="py-3 px-4 font-medium">Tipo</th>
-                                    <th className="py-3 px-4 hidden md:table-cell font-medium">Valor Atual</th>
-                                    <th className="py-3 px-4 font-medium text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {investments.map(inv => (
-                                    <tr key={inv.id} className="border-b border-slate-800 hover:bg-slate-800">
-                                        <td className="py-4 px-4 font-medium text-white">{inv.name}</td>
-                                        <td className="py-4 px-4 text-slate-300">{inv.type}</td>
-                                        <td className="py-4 px-4 hidden md:table-cell font-bold text-cyan-300">{formatCurrency(inv.currentValue)}</td>
-                                        <td className="py-4 px-4 space-x-4 text-right">
-                                            <button onClick={() => openEditModal(inv, 'investment')} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
-                                            <button onClick={() => { setDeletionTarget({ id: inv.id, type: 'investment' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                         <table className="w-full text-left">
-                           <thead>
-                                <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
-                                    <th className="py-3 px-4 font-medium">Descrição</th>
-                                    <th className="py-3 px-4 hidden md:table-cell font-medium">Valor Total</th>
-                                    <th className="py-3 px-4 font-medium">Saldo Devedor</th>
-                                    <th className="py-3 px-4 font-medium text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {debts.map(debt => {
-                                    const installmentAmount = debt.totalAmount / debt.numberOfInstallments;
-                                    const remainingAmount = installmentAmount * (debt.numberOfInstallments - debt.paidInstallments);
-                                    const isExpanded = expandedDebtId === debt.id;
-                                    return (
-                                     <React.Fragment key={debt.id}>
-                                        <tr className="border-b border-slate-800 hover:bg-slate-800/70 cursor-pointer" onClick={() => setExpandedDebtId(isExpanded ? null : debt.id)}>
-                                            <td className="py-4 px-4 font-medium text-white flex items-center">
-                                                <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} className="mr-3 w-4 transition-transform" />
-                                                {debt.name}
-                                                <span className="ml-2 text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{debt.paidInstallments}/{debt.numberOfInstallments}</span>
-                                            </td>
-                                            <td className="py-4 px-4 hidden md:table-cell text-slate-300">{formatCurrency(debt.totalAmount)}</td>
-                                            <td className="py-4 px-4 font-bold text-amber-300">{formatCurrency(remainingAmount)}</td>
-                                            <td className="py-4 px-4 space-x-4 text-right">
-                                                <button onClick={(e) => { e.stopPropagation(); openEditModal(debt, 'debt'); }} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
-                                                <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: debt.id, type: 'debt' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
-                                            </td>
+                    <>
+                        {investments.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                   <thead>
+                                        <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
+                                            <th className="py-3 px-4 font-medium">Ativo</th>
+                                            <th className="py-3 px-4 font-medium">Tipo</th>
+                                            <th className="py-3 px-4 hidden md:table-cell font-medium">Valor Atual</th>
+                                            <th className="py-3 px-4 font-medium text-right">Ações</th>
                                         </tr>
-                                        {isExpanded && (
-                                            <tr className="bg-slate-900/50">
-                                                <td colSpan={4} className="p-4">
-                                                    <h4 className="font-semibold text-white mb-3">Detalhes das Parcelas</h4>
-                                                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                                                        {Array.from({ length: debt.numberOfInstallments }, (_, i) => {
-                                                            const installmentNumber = i + 1;
-                                                            const isPaid = installmentNumber <= debt.paidInstallments;
-                                                            const isNext = installmentNumber === debt.paidInstallments + 1;
-                                                            const installmentValue = debt.totalAmount / debt.numberOfInstallments;
-                                                            
-                                                            const dueDate = new Date(debt.firstDueDate + 'T12:00:00');
-                                                            dueDate.setMonth(dueDate.getMonth() + i);
-
-                                                            return (
-                                                                <div key={i} className="flex justify-between items-center bg-slate-800 p-2.5 rounded-lg text-sm">
-                                                                    <div>
-                                                                        <span className={`font-semibold ${isPaid ? 'text-slate-400 line-through' : 'text-white'}`}>
-                                                                            {installmentNumber}ª Parcela
-                                                                        </span>
-                                                                        <span className="text-slate-400 ml-4">
-                                                                            Venc.: {dueDate.toLocaleDateString('pt-BR')}
-                                                                        </span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-4">
-                                                                        <span className={`font-bold ${isPaid ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                                                            {formatCurrency(installmentValue)}
-                                                                        </span>
-                                                                        {isPaid ? (
-                                                                            <span className="text-emerald-500 font-bold flex items-center gap-1.5 text-xs"><Icon name="check-circle" /> Paga</span>
-                                                                        ) : isNext ? (
-                                                                            <button 
-                                                                                onClick={() => handlePayInstallment(debt)}
-                                                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-md transition-colors text-xs"
-                                                                            >
-                                                                                Pagar
-                                                                            </button>
-                                                                        ) : (
-                                                                            <span className="text-slate-500 font-medium px-3 py-1.5 text-xs">A Vencer</span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
+                                    </thead>
+                                    <tbody>
+                                        {investments.map(inv => (
+                                            <tr key={inv.id} className="border-b border-slate-800 hover:bg-slate-800">
+                                                <td className="py-4 px-4 font-medium text-white">{inv.name}</td>
+                                                <td className="py-4 px-4 text-slate-300">{inv.type}</td>
+                                                <td className="py-4 px-4 hidden md:table-cell font-bold text-cyan-300">{formatCurrency(inv.currentValue)}</td>
+                                                <td className="py-4 px-4 space-x-4 text-right">
+                                                    <button onClick={() => openEditModal(inv, 'investment')} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
+                                                    <button onClick={() => { setDeletionTarget({ id: inv.id, type: 'investment' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
                                                 </td>
                                             </tr>
-                                        )}
-                                     </React.Fragment>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <EmptyState
+                                icon="arrow-trend-up"
+                                title="Nenhum Investimento Adicionado"
+                                message="Cadastre seus investimentos para acompanhar a evolução do seu patrimônio."
+                            />
+                        )}
+                    </>
+                ) : (
+                    <>
+                        {debts.length > 0 ? (
+                            <div className="overflow-x-auto">
+                                 <table className="w-full text-left">
+                                   <thead>
+                                        <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
+                                            <th className="py-3 px-4 font-medium">Descrição</th>
+                                            <th className="py-3 px-4 hidden md:table-cell font-medium">Valor Total</th>
+                                            <th className="py-3 px-4 font-medium">Saldo Devedor</th>
+                                            <th className="py-3 px-4 font-medium text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {debts.map(debt => {
+                                            const installmentAmount = debt.totalAmount / debt.numberOfInstallments;
+                                            const remainingAmount = installmentAmount * (debt.numberOfInstallments - debt.paidInstallments);
+                                            const isExpanded = expandedDebtId === debt.id;
+                                            return (
+                                             <React.Fragment key={debt.id}>
+                                                <tr className="border-b border-slate-800 hover:bg-slate-800/70 cursor-pointer" onClick={() => setExpandedDebtId(isExpanded ? null : debt.id)}>
+                                                    <td className="py-4 px-4 font-medium text-white flex items-center">
+                                                        <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} className="mr-3 w-4 transition-transform" />
+                                                        {debt.name}
+                                                        <span className="ml-2 text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{debt.paidInstallments}/{debt.numberOfInstallments}</span>
+                                                    </td>
+                                                    <td className="py-4 px-4 hidden md:table-cell text-slate-300">{formatCurrency(debt.totalAmount)}</td>
+                                                    <td className="py-4 px-4 font-bold text-amber-300">{formatCurrency(remainingAmount)}</td>
+                                                    <td className="py-4 px-4 space-x-4 text-right">
+                                                        <button onClick={(e) => { e.stopPropagation(); openEditModal(debt, 'debt'); }} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
+                                                        <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: debt.id, type: 'debt' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                                                    </td>
+                                                </tr>
+                                                {isExpanded && (
+                                                    <tr className="bg-slate-900/50">
+                                                        <td colSpan={4} className="p-4">
+                                                            <h4 className="font-semibold text-white mb-3">Detalhes das Parcelas</h4>
+                                                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                                                                {Array.from({ length: debt.numberOfInstallments }, (_, i) => {
+                                                                    const installmentNumber = i + 1;
+                                                                    const isPaid = installmentNumber <= debt.paidInstallments;
+                                                                    const isNext = installmentNumber === debt.paidInstallments + 1;
+                                                                    const installmentValue = debt.totalAmount / debt.numberOfInstallments;
+                                                                    
+                                                                    const dueDate = new Date(debt.firstDueDate + 'T12:00:00');
+                                                                    dueDate.setMonth(dueDate.getMonth() + i);
+
+                                                                    return (
+                                                                        <div key={i} className="flex justify-between items-center bg-slate-800 p-2.5 rounded-lg text-sm">
+                                                                            <div>
+                                                                                <span className={`font-semibold ${isPaid ? 'text-slate-400 line-through' : 'text-white'}`}>
+                                                                                    {installmentNumber}ª Parcela
+                                                                                </span>
+                                                                                <span className="text-slate-400 ml-4">
+                                                                                    Venc.: {dueDate.toLocaleDateString('pt-BR')}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-4">
+                                                                                <span className={`font-bold ${isPaid ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                                                                    {formatCurrency(installmentValue)}
+                                                                                </span>
+                                                                                {isPaid ? (
+                                                                                    <span className="text-emerald-500 font-bold flex items-center gap-1.5 text-xs"><Icon name="check-circle" /> Paga</span>
+                                                                                ) : isNext ? (
+                                                                                    <button 
+                                                                                        onClick={() => handlePayInstallment(debt)}
+                                                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-md transition-colors text-xs"
+                                                                                    >
+                                                                                        Pagar
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <span className="text-slate-500 font-medium px-3 py-1.5 text-xs">A Vencer</span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                             </React.Fragment>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <EmptyState
+                                icon="file-invoice-dollar"
+                                title="Nenhuma Dívida Adicionada"
+                                message="Cadastre seus empréstimos e financiamentos para ter um controle completo."
+                            />
+                        )}
+                    </>
                 )}
             </div>
         </div>
