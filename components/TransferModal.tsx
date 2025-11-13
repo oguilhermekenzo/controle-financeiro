@@ -1,7 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { Account } from '../types';
 import Icon from './icons/Icon';
+import CustomDatePicker from './CustomDatePicker';
+import CustomSelect from './CustomSelect';
 
 interface TransferModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onTransf
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [error, setError] = useState('');
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -67,6 +69,7 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onTransf
   const availableToAccounts = accounts.filter(acc => acc.id !== fromAccountId);
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-md p-8 relative animate-fade-in-up">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
@@ -78,31 +81,25 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onTransf
             <label htmlFor="fromAccount" className="block text-sm font-medium text-slate-300 mb-1">
               De
             </label>
-            <select
-              id="fromAccount"
-              value={fromAccountId}
-              onChange={(e) => handleFromAccountChange(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="" disabled>Selecione a conta de origem...</option>
-              {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
-            </select>
+            <CustomSelect
+                id="fromAccount"
+                value={fromAccountId}
+                onChange={handleFromAccountChange}
+                options={accounts.map(acc => ({ value: acc.id, label: acc.name }))}
+                placeholder="Selecione a conta de origem..."
+            />
           </div>
           <div>
             <label htmlFor="toAccount" className="block text-sm font-medium text-slate-300 mb-1">
               Para
             </label>
-            <select
-              id="toAccount"
-              value={toAccountId}
-              onChange={(e) => setToAccountId(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="" disabled>Selecione a conta de destino...</option>
-              {availableToAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
-            </select>
+            <CustomSelect
+                id="toAccount"
+                value={toAccountId}
+                onChange={setToAccountId}
+                options={availableToAccounts.map(acc => ({ value: acc.id, label: acc.name }))}
+                placeholder="Selecione a conta de destino..."
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -117,13 +114,18 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onTransf
                 className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="0,00"
                 step="0.01"
+                inputMode="decimal"
                 required
               />
             </div>
             <div>
                 <label htmlFor="transferDate" className="block text-sm font-medium text-slate-300 mb-1">Data</label>
-                <input type="date" id="transferDate" value={date} onChange={e => setDate(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required/>
+                <button type="button" onClick={() => setDatePickerOpen(true)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                >
+                  <span>{new Date(date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  <Icon name="calendar-days" />
+              </button>
             </div>
           </div>
           {error && <p className="text-rose-400 text-sm">{error}</p>}
@@ -145,6 +147,17 @@ const TransferModal: React.FC<TransferModalProps> = ({ isOpen, onClose, onTransf
         </form>
       </div>
     </div>
+    {isDatePickerOpen && (
+        <CustomDatePicker
+          selectedDate={new Date(date + 'T12:00:00')}
+          onChange={newDate => {
+            setDate(newDate.toISOString().split('T')[0]);
+            setDatePickerOpen(false);
+          }}
+          onClose={() => setDatePickerOpen(false)}
+        />
+    )}
+    </>
   );
 };
 

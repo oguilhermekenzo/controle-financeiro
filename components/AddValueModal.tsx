@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Goal, Account } from '../types';
 import Icon from './icons/Icon';
+import CustomSelect from './CustomSelect';
 
 interface AddValueModalProps {
   isOpen: boolean;
@@ -54,6 +55,7 @@ const AddValueModal: React.FC<AddValueModalProps> = ({ isOpen, onClose, onAddVal
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="100,00"
               step="0.01"
+              inputMode="decimal"
               required
             />
           </div>
@@ -61,15 +63,12 @@ const AddValueModal: React.FC<AddValueModalProps> = ({ isOpen, onClose, onAddVal
             <label htmlFor="sourceAccount" className="block text-sm font-medium text-slate-300 mb-1">
               Debitar da Conta
             </label>
-            <select
-              id="sourceAccount"
-              value={accountName}
-              onChange={(e) => setAccountName(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              {accounts.map(acc => <option key={acc.id} value={acc.name}>{acc.name}</option>)}
-            </select>
+            <CustomSelect
+                id="sourceAccount"
+                value={accountName}
+                onChange={setAccountName}
+                options={accounts.map(acc => ({ value: acc.name, label: acc.name }))}
+            />
           </div>
           <div className="pt-6 flex justify-end space-x-3">
             <button

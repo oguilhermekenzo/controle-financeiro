@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Transaction, TransactionType, Account, Category, CostCenter, Goal, Person, CreditCard, CreditCardTransaction, CardBrand, Bank, RecurringTransaction, RecurringTransactionFrequency, Investment, InvestmentType, Debt, ParsedTransaction } from './types';
 import Icon from './components/icons/Icon';
@@ -22,56 +20,43 @@ import TransferModal from './components/TransferModal';
 
 
 // Mock Data
-const initialAccounts: Account[] = [
-  { id: '1', name: 'Carteira', initialBalance: 150.75 },
-  { id: '2', name: 'Banco Principal', initialBalance: 3500.00 },
-];
+const initialAccounts: Account[] = [];
 const initialCategories: Category[] = [
-  { id: '1', name: 'Alimentação' }, { id: '2', name: 'Transporte' }, { id: '3', name: 'Moradia' },
-  { id: '4', name: 'Lazer' }, { id: '5', name: 'Salário' }, { id: '6', name: 'Outros' }, { id: '7', name: 'Assinaturas' }, {id: '8', name: 'Pagamento de Fatura'}, {id: '9', name: 'Aporte em Meta'}, { id: '10', name: 'Importado' }, { id: '11', name: 'Pagamento de Empréstimo' }, { id: '12', name: 'Transferência' }
+  { id: '1', name: 'Alimentação', type: 'Saída' },
+  { id: '2', name: 'Transporte', type: 'Saída' },
+  { id: '3', name: 'Moradia', type: 'Saída' },
+  { id: '4', name: 'Lazer', type: 'Saída' },
+  { id: '5', name: 'Salário', type: 'Entrada' },
+  { id: '6', name: 'Outros' }, // Serve para ambos
+  { id: '7', name: 'Assinaturas', type: 'Saída' },
+  { id: '8', name: 'Pagamento de Fatura', type: 'Saída' },
+  { id: '9', name: 'Aporte em Meta', type: 'Saída' },
+  { id: '10', name: 'Importado' }, // Serve para ambos
+  { id: '11', name: 'Pagamento de Empréstimo', type: 'Saída' },
+  { id: '12', name: 'Transferência' }, // Serve para ambos
 ];
 const initialCostCenters: CostCenter[] = [
   { id: '1', name: 'Projeto X' }, { id: '2', name: 'Viagem de Férias' },
 ];
-const initialGoals: Goal[] = [
-    {id: '1', name: 'Viagem para a Europa', currentAmount: 2500, targetAmount: 10000},
-    {id: '2', name: 'Novo Notebook', currentAmount: 800, targetAmount: 6000},
-];
-const initialTransactions: Transaction[] = [
-  { id: '1', type: TransactionType.ENTRADA, description: 'Salário', amount: 5000, date: '2024-07-01', account: 'Banco Principal', category: 'Salário' },
-  { id: '2', type: TransactionType.SAIDA, description: 'Aluguel', amount: 1500, date: '2024-07-05', account: 'Banco Principal', category: 'Moradia' },
-  { id: '3', type: TransactionType.SAIDA, description: 'Supermercado', amount: 450.50, date: '2024-07-10', account: 'Banco Principal', category: 'Alimentação' },
-  { id: '4', type: TransactionType.SAIDA, description: 'Uber', amount: 45.00, date: '2024-07-12', account: 'Carteira', category: 'Transporte', costCenter: 'Projeto X' },
-  { id: '5', type: TransactionType.SAIDA, description: 'Cinema', amount: 60.00, date: '2024-06-20', account: 'Banco Principal', category: 'Lazer' },
-];
-const initialPeople: Person[] = [ { id: '1', name: 'Eu' }, { id: '2', name: 'Cônjuge' } ];
-const initialCreditCards: CreditCard[] = [
-    { id: 'cc1', name: 'Click Platinum', bank: Bank.ITAU, brand: CardBrand.MASTERCARD, last4Digits: '1234', limit: 5000, closingDay: 20, dueDate: 28, color: 'from-orange-500 to-amber-500', accountId: '2' },
-    { id: 'cc2', name: 'Ultravioleta', bank: Bank.NUBANK, brand: CardBrand.MASTERCARD, last4Digits: '5678', limit: 10000, closingDay: 5, dueDate: 15, color: 'from-purple-600 to-indigo-600', accountId: '2' },
-];
-const initialCreditCardTransactions: CreditCardTransaction[] = [
-    { id: 'cct1', cardId: 'cc1', description: 'Restaurante Sofisticado', amount: 150.00, date: '2024-07-18', category: 'Alimentação', personId: '1', paid: false },
-    { id: 'cct2', cardId: 'cc2', description: 'Assinatura Netflix', amount: 39.90, date: '2024-07-10', category: 'Assinaturas', personId: '1', paid: false },
-    { id: 'cct3', cardId: 'cc1', description: 'Gasolina', amount: 200.00, date: '2024-06-22', category: 'Transporte', personId: '1', paid: true },
-    { id: 'cct4', cardId: 'cc1', description: 'Cinema', amount: 55.00, date: '2024-07-20', category: 'Lazer', personId: '2', paid: false },
-];
-const initialRecurringTransactions: RecurringTransaction[] = [
-    { id: 'rt1', type: TransactionType.SAIDA, description: 'Aluguel', amount: 1500, account: 'Banco Principal', category: 'Moradia', frequency: RecurringTransactionFrequency.MENSAL, dayOfMonth: 5, startDate: '2024-01-05', nextDueDate: '2024-08-05' },
-    { id: 'rt2', type: TransactionType.ENTRADA, description: 'Salário', amount: 5000, account: 'Banco Principal', category: 'Salário', frequency: RecurringTransactionFrequency.MENSAL, dayOfMonth: 1, startDate: '2024-01-01', nextDueDate: '2024-08-01' },
-];
-const initialInvestments: Investment[] = [
-    { id: 'inv1', name: 'ITSA4', type: InvestmentType.ACOES, quantity: 100, unitPrice: 10.50, currentValue: 1100.00, acquisitionDate: '2023-05-10' },
-    { id: 'inv2', name: 'Tesouro Selic 2029', type: InvestmentType.RENDA_FIXA, quantity: 1, unitPrice: 5000, currentValue: 5250.00, acquisitionDate: '2023-01-15' },
-];
-const initialDebts: Debt[] = [
-    { id: 'debt1', name: 'Financiamento Carro', totalAmount: 45000, numberOfInstallments: 36, paidInstallments: 12, firstDueDate: '2023-08-10', accountId: '2' },
-];
+const initialGoals: Goal[] = [];
+const initialTransactions: Transaction[] = [];
+const initialPeople: Person[] = [];
+const initialCreditCards: CreditCard[] = [];
+const initialCreditCardTransactions: CreditCardTransaction[] = [];
+const initialRecurringTransactions: RecurringTransaction[] = [];
+const initialInvestments: Investment[] = [];
+const initialDebts: Debt[] = [];
 
 
 type View = 'dashboard' | 'transactions' | 'goals' | 'analysis' | 'cards' | 'people' | 'accounts' | 'patrimonio';
 type DeletionTarget = { id: string; type: 'transaction' | 'cardTransaction' | 'card' | 'person' | 'goal' | 'account' | 'recurringTransaction' | 'investment' | 'debt'; } | null;
 type EditingTarget = { data: any; type: 'transaction' | 'cardTransaction' | 'card' | 'person' | 'goal' | 'account' | 'recurringTransaction' | 'investment' | 'debt'; } | null;
 
+const getValidDateForMonth = (year: number, month: number, day: number) => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const validDay = Math.min(day, daysInMonth);
+    return new Date(year, month, validDay, 12, 0, 0);
+};
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
@@ -550,12 +535,24 @@ const App: React.FC = () => {
         return Object.entries(dataByCategory).map(([name, value]) => ({ name, value }));
     }, [displayTransactions, filteredCreditCardTransactions]);
     
+    const hasData = useMemo(() => {
+        const totalCardExpenses = filteredCreditCardTransactions.reduce((acc, t) => acc + t.amount, 0);
+        return totalIncome > 0 || totalExpenses > 0 || totalCardExpenses > 0;
+    }, [totalIncome, totalExpenses, filteredCreditCardTransactions]);
+
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#ef4444'];
     const chartTooltipFormatter = (value: number) => areValuesVisible ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) : 'R$ ****,**';
     
     const RADIAN = Math.PI / 180;
-    const renderCustomizedPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }) => {
-        if (percent < 0.02) { // Don't render for slices smaller than 2%
+    const renderCustomizedPieLabel = ({ cx, cy, midAngle, outerRadius, percent, value }: {
+        cx?: number;
+        cy?: number;
+        midAngle?: number;
+        outerRadius?: number;
+        percent?: number;
+        value?: any;
+    }) => {
+        if (percent === undefined || percent < 0.02 || cx === undefined || cy === undefined || midAngle === undefined || outerRadius === undefined) {
             return null;
         }
         const radius = outerRadius + 25; // Position label outside the pie
@@ -600,43 +597,52 @@ const App: React.FC = () => {
                     <p className="text-3xl font-semibold text-white">{formatCurrency(balance)}</p>
                 </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
-                    <h2 className="text-xl font-bold text-white mb-4">Despesas por Categoria</h2>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie 
-                                data={expenseData} 
-                                dataKey="value" 
-                                nameKey="name" 
-                                cx="50%" 
-                                cy="50%" 
-                                outerRadius={80} 
-                                fill="#8884d8" 
-                                labelLine={areValuesVisible}
-                                label={areValuesVisible ? renderCustomizedPieLabel : false}
-                            >
-                                {expenseData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                            </Pie>
-                            <Tooltip formatter={chartTooltipFormatter} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
-                            <Legend />
-                        </PieChart>
-                    </ResponsiveContainer>
+
+            {!hasData ? (
+                 <div className="flex flex-col items-center justify-center h-80 bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl text-center">
+                    <Icon name="folder-open" className="text-6xl text-slate-600 mb-4" />
+                    <h3 className="text-xl font-bold text-white">Sem dados para exibir o dashboard</h3>
+                    <p className="text-slate-400 mt-2">Adicione seu primeiro lançamento para começar a ver os gráficos.</p>
                 </div>
-                <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
-                    <h2 className="text-xl font-bold text-white mb-4">Receitas vs Despesas</h2>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={[{ name: 'Fluxo de Caixa', Receitas: totalIncome, Despesas: totalExpenses + filteredCreditCardTransactions.reduce((acc, t) => acc + t.amount, 0) }]}>
-                            <XAxis dataKey="name" stroke="#94a3b8" />
-                            <YAxis stroke="#94a3b8" tickFormatter={(value) => areValuesVisible ? `R$ ${value/1000}k` : ''} />
-                            <Tooltip formatter={chartTooltipFormatter} cursor={{fill: 'rgba(100, 116, 139, 0.1)'}} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
-                            <Legend />
-                            <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                        <h2 className="text-xl font-bold text-white mb-4">Despesas por Categoria</h2>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie 
+                                    data={expenseData} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    outerRadius={80} 
+                                    fill="#8884d8" 
+                                    labelLine={areValuesVisible}
+                                    label={areValuesVisible ? renderCustomizedPieLabel : false}
+                                >
+                                    {expenseData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                </Pie>
+                                <Tooltip formatter={chartTooltipFormatter} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                        <h2 className="text-xl font-bold text-white mb-4">Receitas vs Despesas</h2>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={[{ name: 'Fluxo de Caixa', Receitas: totalIncome, Despesas: totalExpenses + filteredCreditCardTransactions.reduce((acc, t) => acc + t.amount, 0) }]}>
+                                <XAxis dataKey="name" stroke="#94a3b8" />
+                                <YAxis stroke="#94a3b8" tickFormatter={(value) => areValuesVisible ? `R$ ${value/1000}k` : ''} />
+                                <Tooltip formatter={chartTooltipFormatter} cursor={{fill: 'rgba(100, 116, 139, 0.1)'}} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
+                                <Legend />
+                                <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
   };
@@ -852,7 +858,7 @@ const App: React.FC = () => {
                 <form onSubmit={handleAddOrUpdateAccount} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <input type="text" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} placeholder="Nome da conta"
                            className="sm:col-span-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" required/>
-                    <input type="number" value={newAccountBalance} onChange={e => setNewAccountBalance(e.target.value)} placeholder="Saldo inicial (R$)" step="0.01"
+                    <input type="number" value={newAccountBalance} onChange={e => setNewAccountBalance(e.target.value)} placeholder="Saldo inicial (R$)" step="0.01" inputMode="decimal"
                            className="sm:col-span-1 bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" required/>
                     <div className="flex gap-2">
                         <button type="submit" className="flex-1 bg-indigo-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
@@ -985,6 +991,29 @@ const App: React.FC = () => {
     const statementDate = availableMonths[currentCardMonthIndex] || new Date();
     const selectedCard = useMemo(() => creditCards.find(c => c.id === selectedCardId), [selectedCardId]);
 
+    const { statementClosingDate, statementDueDate } = useMemo(() => {
+        if (!selectedCard) {
+            return { statementClosingDate: null, statementDueDate: null };
+        }
+        const year = statementDate.getFullYear();
+        const month = statementDate.getMonth();
+        
+        const dueDate = getValidDateForMonth(year, month, selectedCard.dueDate);
+        
+        let closingDateYear = year;
+        let closingDateMonth = month;
+        if (selectedCard.dueDate < selectedCard.closingDay) {
+            closingDateMonth -= 1;
+            if (closingDateMonth < 0) {
+                closingDateMonth = 11;
+                closingDateYear -= 1;
+            }
+        }
+        const closingDate = getValidDateForMonth(closingDateYear, closingDateMonth, selectedCard.closingDay);
+
+        return { statementClosingDate: closingDate, statementDueDate: dueDate };
+    }, [selectedCard, statementDate]);
+
     const { statementTransactions, total, totalByPerson, isStatementPaid } = useMemo(() => {
         if (!selectedCard || availableMonths.length === 0) return { statementTransactions: [], total: 0, totalByPerson: [], isStatementPaid: false };
         
@@ -1104,7 +1133,7 @@ const App: React.FC = () => {
                        </div>
                        <div className="text-left sm:text-right">
                             <p className="text-slate-300">Total da Fatura: <span className={`font-bold text-3xl ${isStatementPaid ? 'text-emerald-400' : 'text-rose-400'}`}>{formatCurrency(total)}</span></p>
-                            <p className="text-sm text-slate-400">Fecha em: {selectedCard.closingDay}/{statementDate.getMonth()+1} | Vence em: {selectedCard.dueDate}/{statementDate.getMonth()+1}</p>
+                            <p className="text-sm text-slate-400">Fecha em: {statementClosingDate?.getDate()}/{statementClosingDate && statementClosingDate.getMonth() + 1} | Vence em: {statementDueDate?.getDate()}/{statementDueDate && statementDueDate.getMonth() + 1}</p>
                        </div>
                     </div>
                      <div className="mb-6">
@@ -1368,7 +1397,7 @@ const App: React.FC = () => {
                 <Icon name={areValuesVisible ? "eye" : "eye-slash"} className="text-2xl" />
             </button>
         </header>
-        <div className="flex-1">
+        <div className="flex-1 pb-20 md:pb-0">
             {renderView()}
         </div>
       </main>

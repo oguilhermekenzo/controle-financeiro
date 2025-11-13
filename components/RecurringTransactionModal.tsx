@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { RecurringTransaction, TransactionType, RecurringTransactionFrequency, Account, Category } from '../types';
 import Icon from './icons/Icon';
+import CustomDatePicker from './CustomDatePicker';
+import CustomSelect from './CustomSelect';
 
 interface RecurringTransactionModalProps {
   isOpen: boolean;
@@ -25,12 +27,17 @@ const RecurringTransactionModal: React.FC<RecurringTransactionModalProps> = ({
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [account, setAccount] = useState(accounts[0]?.name || '');
-  const [category, setCategory] = useState(categories[0]?.name || '');
+  const [category, setCategory] = useState('');
   const [frequency, setFrequency] = useState<RecurringTransactionFrequency>(RecurringTransactionFrequency.MENSAL);
   const [dayOfMonth, setDayOfMonth] = useState('1');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   const isEditing = !!editingTransaction;
+  
+  const filteredCategories = useMemo(() => {
+    return categories.filter(c => !c.type || c.type === type);
+  }, [type, categories]);
 
   useEffect(() => {
     if (isOpen) {
@@ -44,17 +51,26 @@ const RecurringTransactionModal: React.FC<RecurringTransactionModalProps> = ({
           setDayOfMonth(String(editingTransaction.dayOfMonth));
           setStartDate(editingTransaction.startDate);
         } else {
-          setType(TransactionType.SAIDA);
+          const initialType = TransactionType.SAIDA;
+          setType(initialType);
           setDescription('');
           setAmount('');
           setAccount(accounts[0]?.name || '');
-          setCategory(categories.find(c => c.name !== 'Salário')?.name || '');
+          const availableCategories = categories.filter(c => !c.type || c.type === initialType);
+          setCategory(availableCategories.find(c => c.name !== 'Salário')?.name || availableCategories[0]?.name || '');
           setFrequency(RecurringTransactionFrequency.MENSAL);
           setDayOfMonth('1');
           setStartDate(new Date().toISOString().split('T')[0]);
         }
     }
   }, [editingTransaction, isOpen, accounts, categories]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!filteredCategories.some(c => c.name === category)) {
+      setCategory(filteredCategories[0]?.name || '');
+    }
+  }, [type, isOpen, category, filteredCategories]);
 
   if (!isOpen) return null;
 
@@ -94,6 +110,7 @@ const RecurringTransactionModal: React.FC<RecurringTransactionModalProps> = ({
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-md p-8 relative animate-fade-in-up">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
@@ -126,38 +143,48 @@ const RecurringTransactionModal: React.FC<RecurringTransactionModalProps> = ({
             <div>
               <label htmlFor="rec_amount" className="block text-sm font-medium text-slate-300 mb-1">Valor (R$)</label>
               <input type="number" id="rec_amount" value={amount} onChange={e => setAmount(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" required />
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" inputMode="decimal" required />
             </div>
              <div>
                 <label htmlFor="rec_category" className="block text-sm font-medium text-slate-300 mb-1">Categoria</label>
-                <select id="rec_category" value={category} onChange={e => setCategory(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                </select>
+                <CustomSelect
+                    id="rec_category"
+                    value={category}
+                    onChange={setCategory}
+                    options={filteredCategories.map(c => ({ value: c.name, label: c.name }))}
+                />
              </div>
              <div className="sm:col-span-2">
                 <label htmlFor="rec_account" className="block text-sm font-medium text-slate-300 mb-1">Conta</label>
-                <select id="rec_account" value={account} onChange={e => setAccount(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                  {accounts.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-                </select>
+                <CustomSelect
+                    id="rec_account"
+                    value={account}
+                    onChange={setAccount}
+                    options={accounts.map(a => ({ value: a.name, label: a.name }))}
+                />
             </div>
             <div>
                 <label htmlFor="rec_frequency" className="block text-sm font-medium text-slate-300 mb-1">Frequência</label>
-                <select id="rec_frequency" value={frequency} onChange={e => setFrequency(e.target.value as RecurringTransactionFrequency)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                    {Object.values(RecurringTransactionFrequency).map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
+                 <CustomSelect
+                    id="rec_frequency"
+                    value={frequency}
+                    onChange={(val) => setFrequency(val as RecurringTransactionFrequency)}
+                    options={Object.values(RecurringTransactionFrequency).map(f => ({ value: f, label: f }))}
+                />
             </div>
              <div>
                 <label htmlFor="rec_day" className="block text-sm font-medium text-slate-300 mb-1">Dia do Mês</label>
                 <input type="number" id="rec_day" value={dayOfMonth} onChange={e => setDayOfMonth(e.target.value)}
-                      min="1" max="31" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
+                      min="1" max="31" inputMode="numeric" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="rec_start_date" className="block text-sm font-medium text-slate-300 mb-1">Data de Início</label>
-              <input type="date" id="rec_start_date" value={startDate} onChange={e => setStartDate(e.target.value)}
-                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required/>
+               <button type="button" onClick={() => setDatePickerOpen(true)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                >
+                  <span>{new Date(startDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  <Icon name="calendar-days" />
+              </button>
             </div>
           </div>
           <div className="pt-6 flex justify-end space-x-3">
@@ -173,6 +200,17 @@ const RecurringTransactionModal: React.FC<RecurringTransactionModalProps> = ({
         </form>
       </div>
     </div>
+    {isDatePickerOpen && (
+        <CustomDatePicker
+          selectedDate={new Date(startDate + 'T12:00:00')}
+          onChange={newDate => {
+            setStartDate(newDate.toISOString().split('T')[0]);
+            setDatePickerOpen(false);
+          }}
+          onClose={() => setDatePickerOpen(false)}
+        />
+    )}
+    </>
   );
 };
 

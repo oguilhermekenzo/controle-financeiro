@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CreditCardTransaction, CreditCard, Person, Category } from '../types';
+import { CreditCardTransaction, CreditCard, Person, Category, TransactionType } from '../types';
 import Icon from './icons/Icon';
+import CustomDatePicker from './CustomDatePicker';
+import CustomSelect from './CustomSelect';
 
 interface AddCardTransactionModalProps {
   isOpen: boolean;
@@ -34,14 +36,19 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [personId, setPersonId] = useState(people[0]?.id || '');
-  const [category, setCategory] = useState(categories[0]?.name || '');
+  const [category, setCategory] = useState('');
   const [notes, setNotes] = useState('');
   const [installments, setInstallments] = useState('1');
   const [installmentAmount, setInstallmentAmount] = useState('');
   const [isUserEditingInstallmentAmount, setIsUserEditingInstallmentAmount] = useState(false);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   const isEditing = !!editingTransaction;
   
+  const filteredCategories = useMemo(() => {
+    return categories.filter(c => c.type !== TransactionType.ENTRADA);
+  }, [categories]);
+
   useEffect(() => {
     if (isOpen) {
         if (isEditing) {
@@ -60,14 +67,14 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
             setAmount('');
             setDate(new Date().toISOString().split('T')[0]);
             setPersonId(people[0]?.id || '');
-            setCategory(categories.find(c => c.name !== 'Salário')?.name || '');
+            setCategory(filteredCategories[0]?.name || '');
             setNotes('');
             setInstallments('1');
             setInstallmentAmount('');
             setIsUserEditingInstallmentAmount(false);
         }
     }
-  }, [editingTransaction, isOpen, defaultCardId, cards, people, categories]);
+  }, [editingTransaction, isOpen, defaultCardId, cards, people, filteredCategories]);
 
   useEffect(() => {
     if (isEditing || isUserEditingInstallmentAmount) return;
@@ -139,6 +146,7 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
 
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-md p-8 relative animate-fade-in-up">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
@@ -150,10 +158,12 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="sm:col-span-2">
                 <label htmlFor="card" className="block text-sm font-medium text-slate-300 mb-1">Cartão *</label>
-                <select id="card" value={cardId} onChange={e => setCardId(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                {cards.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <CustomSelect
+                  id="card"
+                  value={cardId}
+                  onChange={setCardId}
+                  options={cards.map(c => ({ value: c.id, label: c.name }))}
+                />
             </div>
             <div className="sm:col-span-2">
                 <label htmlFor="ccDescription" className="block text-sm font-medium text-slate-300 mb-1">Descrição</label>
@@ -165,30 +175,38 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
                     <label htmlFor="ccAmount" className="block text-sm font-medium text-slate-300 mb-1">Valor (R$) *</label>
                     <input type="number" id="ccAmount" value={amount} onChange={e => { setAmount(e.target.value); setIsUserEditingInstallmentAmount(false);}}
                         className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                        placeholder="0,00" step="0.01" required disabled={isEditing} />
+                        placeholder="0,00" step="0.01" inputMode="decimal" required disabled={isEditing} />
                 </div>
                 <div>
                     <label htmlFor="ccDate" className="block text-sm font-medium text-slate-300 mb-1">Data</label>
-                    <input type="date" id="ccDate" value={date} onChange={e => setDate(e.target.value)}
-                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required/>
+                     <button type="button" onClick={() => setDatePickerOpen(true)}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                    >
+                        <span>{new Date(date + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                        <Icon name="calendar-days" />
+                    </button>
                 </div>
             </div>
              <div className="grid grid-cols-2 gap-4">
                  <div>
                     <label htmlFor="ccPerson" className="block text-sm font-medium text-slate-300 mb-1">Pessoa *</label>
-                    <select id="ccPerson" value={personId} onChange={e => setPersonId(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                    <option value="">Selecione...</option>
-                    {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+                    <CustomSelect
+                      id="ccPerson"
+                      value={personId}
+                      onChange={setPersonId}
+                      placeholder="Selecione..."
+                      options={[{value: '', label: 'Selecione...'}, ...people.map(p => ({ value: p.id, label: p.name }))]}
+                    />
                  </div>
                  <div>
                     <label htmlFor="ccCategory" className="block text-sm font-medium text-slate-300 mb-1">Categoria</label>
-                    <select id="ccCategory" value={category} onChange={e => setCategory(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                    <option value="">Selecione...</option>
-                    {categories.filter(c => c.name !== 'Salário').map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                    </select>
+                    <CustomSelect
+                      id="ccCategory"
+                      value={category}
+                      onChange={setCategory}
+                      placeholder="Selecione..."
+                      options={[{value: '', label: 'Selecione...'}, ...filteredCategories.map(c => ({ value: c.name, label: c.name }))]}
+                    />
                  </div>
             </div>
             
@@ -199,14 +217,14 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
                    <div>
                         <label htmlFor="ccInstallments" className="block text-sm font-medium text-slate-300 mb-1">Nº de Parcelas</label>
                         <input type="number" id="ccInstallments" value={installments} onChange={e => { setInstallments(e.target.value); setIsUserEditingInstallmentAmount(false); }}
-                            min="1" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
+                            min="1" inputMode="numeric" className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
                     </div>
                     <div>
                         <label htmlFor="ccInstallmentAmount" className="block text-sm font-medium text-slate-300 mb-1">Valor da Parcela</label>
                         <input type="number" id="ccInstallmentAmount" value={installmentAmount} 
                               onChange={e => { setInstallmentAmount(e.target.value); setIsUserEditingInstallmentAmount(true); }}
                               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white"
-                              placeholder="0,00" step="0.01" required disabled={numInstallments <= 1} />
+                              placeholder="0,00" step="0.01" inputMode="decimal" required disabled={numInstallments <= 1} />
                     </div>
                 </div>
                  {numInstallments > 1 && (
@@ -236,6 +254,17 @@ const AddCardTransactionModal: React.FC<AddCardTransactionModalProps> = ({
         </form>
       </div>
     </div>
+    {isDatePickerOpen && (
+        <CustomDatePicker
+            selectedDate={new Date(date + 'T12:00:00')}
+            onChange={newDate => {
+                setDate(newDate.toISOString().split('T')[0]);
+                setDatePickerOpen(false);
+            }}
+            onClose={() => setDatePickerOpen(false)}
+        />
+    )}
+    </>
   );
 };
 

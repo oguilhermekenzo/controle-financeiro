@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Account, ParsedTransaction, TransactionType } from '../types';
 import { parseBankStatement } from '../services/geminiService';
 import Icon from './icons/Icon';
+import CustomSelect from './CustomSelect';
 
 interface ImportStatementModalProps {
   isOpen: boolean;
@@ -69,14 +70,12 @@ const ImportStatementModal: React.FC<ImportStatementModalProps> = ({ isOpen, onC
               <label htmlFor="importAccount" className="block text-sm font-medium text-slate-300 mb-1">
                 Importar para a Conta
               </label>
-              <select 
-                id="importAccount" 
-                value={selectedAccount} 
-                onChange={e => setSelectedAccount(e.target.value)}
-                className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {accounts.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-              </select>
+              <CustomSelect
+                  id="importAccount"
+                  value={selectedAccount}
+                  onChange={setSelectedAccount}
+                  options={accounts.map(a => ({ value: a.name, label: a.name }))}
+              />
             </div>
             <div>
               <label htmlFor="statementText" className="block text-sm font-medium text-slate-300 mb-1">

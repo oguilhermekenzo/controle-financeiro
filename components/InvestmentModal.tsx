@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Investment, InvestmentType } from '../types';
 import Icon from './icons/Icon';
+import CustomDatePicker from './CustomDatePicker';
+import CustomSelect from './CustomSelect';
 
 interface InvestmentModalProps {
   isOpen: boolean;
@@ -17,6 +19,7 @@ const InvestmentModal: React.FC<InvestmentModalProps> = ({ isOpen, onClose, onAd
   const [unitPrice, setUnitPrice] = useState('');
   const [currentValue, setCurrentValue] = useState('');
   const [acquisitionDate, setAcquisitionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
 
   const isEditing = !!editingInvestment;
 
@@ -68,6 +71,7 @@ const InvestmentModal: React.FC<InvestmentModalProps> = ({ isOpen, onClose, onAd
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-md p-8 relative animate-fade-in-up">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
@@ -82,25 +86,33 @@ const InvestmentModal: React.FC<InvestmentModalProps> = ({ isOpen, onClose, onAd
             </div>
             <div className="sm:col-span-2">
                 <label htmlFor="inv_type" className="block text-sm font-medium text-slate-300 mb-1">Tipo</label>
-                <select id="inv_type" value={type} onChange={e => setType(e.target.value as InvestmentType)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                    {Object.values(InvestmentType).map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <CustomSelect
+                  id="inv_type"
+                  value={type}
+                  onChange={(val) => setType(val as InvestmentType)}
+                  options={Object.values(InvestmentType).map(t => ({ value: t, label: t }))}
+                />
             </div>
              <div>
                 <label htmlFor="inv_quantity" className="block text-sm font-medium text-slate-300 mb-1">Quantidade</label>
-                <input type="number" id="inv_quantity" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="any" required />
+                <input type="number" id="inv_quantity" value={quantity} onChange={e => setQuantity(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="any" inputMode="decimal" required />
             </div>
             <div>
                 <label htmlFor="inv_unit_price" className="block text-sm font-medium text-slate-300 mb-1">Preço Unit. (Compra)</label>
-                <input type="number" id="inv_unit_price" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" required />
+                <input type="number" id="inv_unit_price" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" inputMode="decimal" required />
             </div>
             <div>
                 <label htmlFor="inv_current_value" className="block text-sm font-medium text-slate-300 mb-1">Valor Atual Total</label>
-                <input type="number" id="inv_current_value" value={currentValue} onChange={e => setCurrentValue(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" required />
+                <input type="number" id="inv_current_value" value={currentValue} onChange={e => setCurrentValue(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" inputMode="decimal" required />
             </div>
             <div>
                 <label htmlFor="inv_date" className="block text-sm font-medium text-slate-300 mb-1">Data da Compra</label>
-                <input type="date" id="inv_date" value={acquisitionDate} onChange={e => setAcquisitionDate(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required/>
+                 <button type="button" onClick={() => setDatePickerOpen(true)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                >
+                  <span>{new Date(acquisitionDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  <Icon name="calendar-days" />
+                </button>
             </div>
           </div>
           <div className="pt-6 flex justify-end space-x-3">
@@ -110,6 +122,17 @@ const InvestmentModal: React.FC<InvestmentModalProps> = ({ isOpen, onClose, onAd
         </form>
       </div>
     </div>
+     {isDatePickerOpen && (
+        <CustomDatePicker
+          selectedDate={new Date(acquisitionDate + 'T12:00:00')}
+          onChange={newDate => {
+            setAcquisitionDate(newDate.toISOString().split('T')[0]);
+            setDatePickerOpen(false);
+          }}
+          onClose={() => setDatePickerOpen(false)}
+        />
+    )}
+    </>
   );
 };
 

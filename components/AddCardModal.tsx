@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, CardBrand, Bank, Account } from '../types';
 import Icon from './icons/Icon';
+import CustomSelect from './CustomSelect';
 
 interface AddCardModalProps {
   isOpen: boolean;
@@ -104,44 +105,50 @@ const AddCardModal: React.FC<AddCardModalProps> = ({ isOpen, onClose, onAddCard,
               </div>
               <div>
                   <label htmlFor="cardBank" className="block text-sm font-medium text-slate-300 mb-1">Banco *</label>
-                  <select id="cardBank" value={bank} onChange={e => setBank(e.target.value as Bank)}
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white">
-                      {Object.values(Bank).map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                  <CustomSelect
+                    id="cardBank"
+                    value={bank}
+                    onChange={(val) => setBank(val as Bank)}
+                    options={Object.values(Bank).map(b => ({ value: b, label: b }))}
+                  />
               </div>
               <div>
                   <label htmlFor="cardBrand" className="block text-sm font-medium text-slate-300 mb-1">Bandeira *</label>
-                  <select id="cardBrand" value={brand} onChange={e => setBrand(e.target.value as CardBrand)}
-                          className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white">
-                      {Object.values(CardBrand).map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                   <CustomSelect
+                    id="cardBrand"
+                    value={brand}
+                    onChange={(val) => setBrand(val as CardBrand)}
+                    options={Object.values(CardBrand).map(b => ({ value: b, label: b }))}
+                  />
               </div>
                <div className="sm:col-span-2">
                     <label htmlFor="cardAccount" className="block text-sm font-medium text-slate-300 mb-1">Debitar da Conta *</label>
-                    <select id="cardAccount" value={accountId} onChange={e => setAccountId(e.target.value)}
-                            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                        <option value="" disabled>Selecione uma conta...</option>
-                        {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
-                    </select>
+                    <CustomSelect
+                      id="cardAccount"
+                      value={accountId}
+                      onChange={setAccountId}
+                      placeholder="Selecione uma conta..."
+                      options={accounts.map(acc => ({ value: acc.id, label: acc.name }))}
+                    />
               </div>
               <div>
                   <label htmlFor="cardLast4" className="block text-sm font-medium text-slate-300 mb-1">Últimos 4 dígitos *</label>
-                  <input type="text" id="cardLast4" value={last4Digits} onChange={e => setLast4Digits(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" id="cardLast4" value={last4Digits} onChange={e => setLast4Digits(e.target.value.replace(/\D/g, '').slice(0, 4))}
                       maxLength={4} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
               </div>
               <div>
                   <label htmlFor="cardLimit" className="block text-sm font-medium text-slate-300 mb-1">Limite (R$) *</label>
-                  <input type="number" id="cardLimit" value={limit} onChange={e => setLimit(e.target.value)}
+                  <input type="number" inputMode="decimal" id="cardLimit" value={limit} onChange={e => setLimit(e.target.value)}
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
               </div>
               <div>
                   <label htmlFor="cardClosingDay" className="block text-sm font-medium text-slate-300 mb-1">Dia do Fechamento *</label>
-                  <input type="number" id="cardClosingDay" value={closingDay} onChange={e => setClosingDay(e.target.value)} min="1" max="31"
+                  <input type="number" inputMode="numeric" id="cardClosingDay" value={closingDay} onChange={e => setClosingDay(e.target.value)} min="1" max="31"
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
               </div>
               <div>
                   <label htmlFor="cardDueDate" className="block text-sm font-medium text-slate-300 mb-1">Dia do Vencimento *</label>
-                  <input type="number" id="cardDueDate" value={dueDate} onChange={e => setDueDate(e.target.value)}  min="1" max="31"
+                  <input type="number" inputMode="numeric" id="cardDueDate" value={dueDate} onChange={e => setDueDate(e.target.value)}  min="1" max="31"
                       className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
               </div>
           </div>

@@ -25,6 +25,7 @@ export interface Account {
 export interface Category {
   id: string;
   name: string;
+  type?: 'Entrada' | 'Saída'; // Se omitido, serve para ambos
 }
 
 export interface CostCenter {

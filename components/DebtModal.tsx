@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Debt, Account } from '../types';
 import Icon from './icons/Icon';
+import CustomDatePicker from './CustomDatePicker';
+import CustomSelect from './CustomSelect';
 
 interface DebtModalProps {
   isOpen: boolean;
@@ -18,6 +20,7 @@ const DebtModal: React.FC<DebtModalProps> = ({ isOpen, onClose, onAddDebt, onEdi
   const [paidInstallments, setPaidInstallments] = useState('0');
   const [firstDueDate, setFirstDueDate] = useState(new Date().toISOString().split('T')[0]);
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
+  const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   
   const isEditing = !!editingDebt;
 
@@ -75,6 +78,7 @@ const DebtModal: React.FC<DebtModalProps> = ({ isOpen, onClose, onAddDebt, onEdi
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-50 p-4">
       <div className="bg-slate-800 border border-slate-700 rounded-2xl shadow-xl w-full max-w-md p-8 relative animate-fade-in-up">
         <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors">
@@ -89,26 +93,34 @@ const DebtModal: React.FC<DebtModalProps> = ({ isOpen, onClose, onAddDebt, onEdi
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="debt_total" className="block text-sm font-medium text-slate-300 mb-1">Valor Total (R$)</label>
-              <input type="number" id="debt_total" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" required />
+              <input type="number" id="debt_total" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="0.01" inputMode="decimal" required />
             </div>
             <div>
               <label htmlFor="debt_installments" className="block text-sm font-medium text-slate-300 mb-1">Nº de Parcelas</label>
-              <input type="number" id="debt_installments" value={numberOfInstallments} onChange={e => setNumberOfInstallments(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="1" min="1" required />
+              <input type="number" id="debt_installments" value={numberOfInstallments} onChange={e => setNumberOfInstallments(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="1" min="1" inputMode="numeric" required />
             </div>
             <div>
               <label htmlFor="debt_paid_installments" className="block text-sm font-medium text-slate-300 mb-1">Parcelas já Pagas</label>
-              <input type="number" id="debt_paid_installments" value={paidInstallments} onChange={e => setPaidInstallments(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="1" min="0" required />
+              <input type="number" id="debt_paid_installments" value={paidInstallments} onChange={e => setPaidInstallments(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" step="1" min="0" inputMode="numeric" required />
             </div>
              <div>
               <label htmlFor="debt_due_date" className="block text-sm font-medium text-slate-300 mb-1">Venc. 1ª Parcela</label>
-              <input type="date" id="debt_due_date" value={firstDueDate} onChange={e => setFirstDueDate(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required />
+               <button type="button" onClick={() => setDatePickerOpen(true)}
+                    className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                >
+                  <span>{new Date(firstDueDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                  <Icon name="calendar-days" />
+              </button>
             </div>
           </div>
            <div>
               <label htmlFor="debt_account" className="block text-sm font-medium text-slate-300 mb-1">Debitar da Conta</label>
-               <select id="debt_account" value={accountId} onChange={e => setAccountId(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" required>
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </select>
+              <CustomSelect
+                id="debt_account"
+                value={accountId}
+                onChange={setAccountId}
+                options={accounts.map(a => ({ value: a.id, label: a.name }))}
+              />
           </div>
           <div className="pt-6 flex justify-end space-x-3">
             <button type="button" onClick={onClose} className="px-5 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-500 transition-colors font-semibold">Cancelar</button>
@@ -117,6 +129,17 @@ const DebtModal: React.FC<DebtModalProps> = ({ isOpen, onClose, onAddDebt, onEdi
         </form>
       </div>
     </div>
+    {isDatePickerOpen && (
+        <CustomDatePicker
+          selectedDate={new Date(firstDueDate + 'T12:00:00')}
+          onChange={newDate => {
+            setFirstDueDate(newDate.toISOString().split('T')[0]);
+            setDatePickerOpen(false);
+          }}
+          onClose={() => setDatePickerOpen(false)}
+        />
+    )}
+    </>
   );
 };
 

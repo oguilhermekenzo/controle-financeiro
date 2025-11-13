@@ -85,6 +85,7 @@ const GoalModal: React.FC<GoalModalProps> = ({ isOpen, onClose, onAddGoal, onEdi
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="10000,00"
               step="0.01"
+              inputMode="decimal"
               required
             />
           </div>
