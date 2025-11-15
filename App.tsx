@@ -1,12 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Transaction, TransactionType, Account, Category, CostCenter, Goal, Person, CreditCard, CreditCardTransaction, CardBrand, Bank, RecurringTransaction, RecurringTransactionFrequency, Investment, InvestmentType, Debt, ParsedTransaction } from './types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Transaction, TransactionType, Account, Category, CostCenter, Goal, Person, CreditCard, CreditCardTransaction, CardBrand, Bank, RecurringTransaction, RecurringTransactionFrequency, Investment, InvestmentType, Debt } from './types';
+import { supabase } from './services/supabaseClient';
+import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import Icon from './components/icons/Icon';
 import AddTransactionModal from './components/AddTransactionModal';
 import AddCardModal from './components/AddCardModal';
 import AddCardTransactionModal from './components/AddCardTransactionModal';
-import SmartAnalysis from './components/SmartAnalysis';
 import ConfirmationModal from './components/ConfirmationModal';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, Sector } from 'recharts';
 import CardBrandLogo from './components/icons/CardBrandLogo';
 import GoalModal from './components/GoalModal';
 import AddValueModal from './components/AddValueModal';
@@ -14,94 +15,90 @@ import BankLogo from './components/icons/BankLogo';
 import RecurringTransactionModal from './components/RecurringTransactionModal';
 import InvestmentModal from './components/InvestmentModal';
 import DebtModal from './components/DebtModal';
-import ImportStatementModal from './components/ImportStatementModal';
 import CustomDatePicker from './components/CustomDatePicker';
 import TransferModal from './components/TransferModal';
 import EmptyState from './components/EmptyState';
+import Auth from './components/Auth';
 
 
-// Mock Data
-const initialAccounts: Account[] = [
-  { id: 'acc1', name: 'Conta Corrente Itaú', initialBalance: 1500 },
-  { id: 'acc2', name: 'Conta Poupança Santander', initialBalance: 8500 },
-  { id: 'acc3', name: 'Carteira', initialBalance: 350.75 },
+const initialCategoriesData: Omit<Category, 'id'>[] = [
+  { name: 'Alimentação', type: 'Saída' }, { name: 'Transporte', type: 'Saída' }, { name: 'Moradia', type: 'Saída' }, { name: 'Lazer', type: 'Saída' }, { name: 'Salário', type: 'Entrada' }, { name: 'Outros' }, { name: 'Assinaturas', type: 'Saída' }, { name: 'Pagamento de Fatura', type: 'Saída' }, { name: 'Aporte em Meta', type: 'Saída' }, { name: 'Importado' }, { name: 'Pagamento de Empréstimo', type: 'Saída' }, { name: 'Transferência' },
 ];
 
-const initialCategories: Category[] = [
-  { id: '1', name: 'Alimentação', type: 'Saída' },
-  { id: '2', name: 'Transporte', type: 'Saída' },
-  { id: '3', name: 'Moradia', type: 'Saída' },
-  { id: '4', name: 'Lazer', type: 'Saída' },
-  { id: '5', name: 'Salário', type: 'Entrada' },
-  { id: '6', name: 'Outros' }, // Serve para ambos
-  { id: '7', name: 'Assinaturas', type: 'Saída' },
-  { id: '8', name: 'Pagamento de Fatura', type: 'Saída' },
-  { id: '9', name: 'Aporte em Meta', type: 'Saída' },
-  { id: '10', name: 'Importado' }, // Serve para ambos
-  { id: '11', name: 'Pagamento de Empréstimo', type: 'Saída' },
-  { id: '12', name: 'Transferência' }, // Serve para ambos
-];
+const seedTestData = async (userId: string) => {
+    console.log("Seeding data for test user...");
+    // 1. Categories
+    const categoriesToSeed = initialCategoriesData.map(c => ({ ...c, user_id: userId }));
+    const { data: seededCategories, error: catError } = await supabase.from('categories').insert(categoriesToSeed).select();
+    if (catError || !seededCategories) { console.error('Seeding error (categories):', catError); return; }
+    
+    // 2. Accounts
+    const { data: seededAccounts, error: accError } = await supabase.from('accounts').insert([
+        { user_id: userId, name: 'Carteira', initial_balance: 150.75 },
+        { user_id: userId, name: 'Conta Corrente Inter', initial_balance: 3250.00 },
+    ]).select();
+    if (accError || !seededAccounts) { console.error('Seeding error (accounts):', accError); return; }
+    const carteiraId = seededAccounts.find(a => a.name === 'Carteira')?.id;
+    const contaCorrenteId = seededAccounts.find(a => a.name === 'Conta Corrente Inter')?.id;
 
-const initialCostCenters: CostCenter[] = [
-  { id: '1', name: 'Projeto X' }, { id: '2', name: 'Viagem de Férias' },
-];
+    // 3. People
+    const { data: seededPeople, error: pplError } = await supabase.from('people').insert([
+        { user_id: userId, name: 'Maria' },
+        { user_id: userId, name: 'João' },
+    ]).select();
+    if (pplError || !seededPeople) { console.error('Seeding error (people):', pplError); return; }
+    const mariaId = seededPeople.find(p => p.name === 'Maria')?.id;
 
-const initialGoals: Goal[] = [
-    { id: 'goal1', name: 'Viagem para a Europa', targetAmount: 20000, currentAmount: 7500 },
-    { id: 'goal2', name: 'Novo Computador', targetAmount: 8000, currentAmount: 6800 },
-];
+    // 4. Credit Cards
+    const { data: seededCards, error: cardError } = await supabase.from('credit_cards').insert([
+        { 
+            user_id: userId, account_id: contaCorrenteId, name: 'Nubank', bank: 'Nubank',
+            brand: 'Mastercard', last_4_digits: '5432', limit: 4000,
+            closing_day: 25, due_date: 4, color: 'from-indigo-500 to-purple-600',
+        }
+    ]).select();
+    if (cardError || !seededCards) { console.error('Seeding error (cards):', cardError); return; }
+    const nubankCardId = seededCards[0].id;
 
-const initialTransactions: Transaction[] = [
-    { id: 'tx1', type: TransactionType.ENTRADA, description: 'Salário Mensal', amount: 7500, date: '2025-11-05', account: 'Conta Corrente Itaú', category: 'Salário' },
-    { id: 'tx2', type: TransactionType.SAIDA, description: 'Aluguel', amount: 1800, date: '2025-11-06', account: 'Conta Corrente Itaú', category: 'Moradia' },
-    { id: 'tx3', type: TransactionType.SAIDA, description: 'Aporte Meta: Viagem para a Europa', amount: 500, date: '2025-11-07', account: 'Conta Poupança Santander', category: 'Aporte em Meta' },
-    { id: 'tx4', type: TransactionType.ENTRADA, description: 'Freelance Website', amount: 1200, date: '2025-10-20', account: 'Conta Corrente Itaú', category: 'Outros' },
-    { id: 'tx5', type: TransactionType.SAIDA, description: 'Transferência para Carteira', amount: 200, date: '2025-11-01', account: 'Conta Corrente Itaú', category: 'Transferência' },
-    { id: 'tx6', type: TransactionType.ENTRADA, description: 'Transferência de C/C Itaú', amount: 200, date: '2025-11-01', account: 'Carteira', category: 'Transferência' },
-];
+    // 5. Goals
+    await supabase.from('goals').insert([
+        { user_id: userId, name: 'Viagem de Férias', target_amount: 8000, current_amount: 1250 },
+    ]);
 
-const initialPeople: Person[] = [
-    { id: 'person1', name: 'Guilherme' },
-    { id: 'person2', name: 'Maria' },
-];
+    // 6. Transactions
+    const catAlimentacaoId = seededCategories.find(c => c.name === 'Alimentação')?.id;
+    const catTransporteId = seededCategories.find(c => c.name === 'Transporte')?.id;
+    const catSalarioId = seededCategories.find(c => c.name === 'Salário')?.id;
 
-const initialCreditCards: CreditCard[] = [
-    { id: 'card1', name: 'Itaú Signature', bank: Bank.ITAU, brand: CardBrand.VISA, last4Digits: '1234', limit: 10000, closingDay: 25, dueDate: 4, color: 'from-indigo-500 to-purple-600', accountId: 'acc1' },
-    { id: 'card2', name: 'Nubank Ultravioleta', bank: Bank.NUBANK, brand: CardBrand.MASTERCARD, last4Digits: '5678', limit: 15000, closingDay: 28, dueDate: 7, color: 'from-slate-500 to-slate-700', accountId: 'acc1' },
-];
+    await supabase.from('transactions').insert([
+        { user_id: userId, account_id: contaCorrenteId, category_id: catSalarioId, type: 'Entrada', description: 'Salário Mensal', amount: 7000, date: new Date(new Date().setDate(5)).toISOString().split('T')[0] },
+        { user_id: userId, account_id: carteiraId, category_id: catAlimentacaoId, type: 'Saída', description: 'Almoço Restaurante', amount: 35.50, date: new Date().toISOString().split('T')[0] },
+    ]);
 
-const initialCreditCardTransactions: CreditCardTransaction[] = [
-    { id: 'cctx1', cardId: 'card1', description: 'Restaurante Outback', amount: 250.50, date: '2025-10-28', personId: 'person1', category: 'Alimentação', paid: false },
-    { id: 'cctx2', cardId: 'card1', description: 'Spotify', amount: 21.90, date: '2025-11-10', personId: 'person1', category: 'Assinaturas', paid: false },
-    { id: 'cctx3', cardId: 'card2', description: 'Cinema', amount: 80, date: '2025-11-02', personId: 'person2', category: 'Lazer', paid: false },
-    { id: 'cctx4', cardId: 'card1', description: 'Compras Supermercado', amount: 430.70, date: '2025-11-15', personId: 'person1', category: 'Alimentação', paid: false },
-];
+    // 7. Credit Card Transactions
+    await supabase.from('credit_card_transactions').insert([
+        { user_id: userId, card_id: nubankCardId, category_id: catTransporteId, description: 'Uber para o trabalho', amount: 22.80, date: new Date().toISOString().split('T')[0], paid: false },
+        { user_id: userId, card_id: nubankCardId, category_id: catAlimentacaoId, person_id: mariaId, description: 'Jantar com Maria', amount: 180.50, date: new Date(new Date().setDate(new Date().getDate() - 2)).toISOString().split('T')[0], paid: false },
+    ]);
 
-const initialRecurringTransactions: RecurringTransaction[] = [
-    { id: 'rtx1', type: TransactionType.SAIDA, description: 'Netflix', amount: 39.90, account: 'Conta Corrente Itaú', category: 'Assinaturas', frequency: RecurringTransactionFrequency.MENSAL, dayOfMonth: 10, startDate: '2025-01-10', nextDueDate: '2025-12-10' },
-];
-
-const initialInvestments: Investment[] = [
-    { id: 'inv1', name: 'ITSA4', type: InvestmentType.ACOES, quantity: 200, unitPrice: 9.50, currentValue: 2100, acquisitionDate: '2024-03-15' },
-    { id: 'inv2', name: 'Tesouro Selic 2029', type: InvestmentType.RENDA_FIXA, quantity: 1, unitPrice: 12000, currentValue: 12800, acquisitionDate: '2024-01-20' },
-];
-
-const initialDebts: Debt[] = [
-    { id: 'debt1', name: 'Financiamento Apartamento', totalAmount: 250000, numberOfInstallments: 360, paidInstallments: 24, firstDueDate: '2023-12-25', accountId: 'acc1' }
-];
+    console.log("Seeding complete!");
+};
 
 
-type View = 'dashboard' | 'transactions' | 'goals' | 'analysis' | 'cards' | 'people' | 'accounts' | 'patrimonio';
+// --- TIPOS ---
+type View = 'dashboard' | 'transactions' | 'goals' | 'cards' | 'people' | 'accounts' | 'patrimonio' | 'settings';
 type DeletionTarget = { id: string; type: 'transaction' | 'cardTransaction' | 'card' | 'person' | 'goal' | 'account' | 'recurringTransaction' | 'investment' | 'debt'; } | null;
 type EditingTarget = { data: any; type: 'transaction' | 'cardTransaction' | 'card' | 'person' | 'goal' | 'account' | 'recurringTransaction' | 'investment' | 'debt'; } | null;
 
+// --- HELPERS ---
 const getValidDateForMonth = (year: number, month: number, day: number) => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const validDay = Math.min(day, daysInMonth);
     return new Date(year, month, validDay, 12, 0, 0);
 };
 
-const App: React.FC = () => {
+const MainApp: React.FC<{ session: Session }> = ({ session }) => {
+  const { user } = session;
   const [activeView, setActiveView] = useState<View>('dashboard');
   
   // State for Modals
@@ -114,40 +111,160 @@ const App: React.FC = () => {
   const [isRecurringTxModalOpen, setRecurringTxModalOpen] = useState(false);
   const [isInvestmentModalOpen, setInvestmentModalOpen] = useState(false);
   const [isDebtModalOpen, setDebtModalOpen] = useState(false);
-  const [isImportModalOpen, setImportModalOpen] = useState(false);
   const [isDatePickerOpen, setDatePickerOpen] = useState(false);
   const [isTransferModalOpen, setTransferModalOpen] = useState(false);
   const [isMoreMenuOpen, setMoreMenuOpen] = useState(false);
 
   const [confirmationProps, setConfirmationProps] = useState({ onConfirm: () => {}, title: '', message: '', confirmText: 'Confirmar', confirmButtonClass: '' });
   
-  // State for data
-  const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions);
-  const [accounts, setAccounts] = useState<Account[]>(initialAccounts);
-  const [categories] = useState<Category[]>(initialCategories);
-  const [costCenters] = useState<CostCenter[]>(initialCostCenters);
-  const [goals, setGoals] = useState<Goal[]>(initialGoals);
-  const [people, setPeople] = useState<Person[]>(initialPeople);
-  const [creditCards, setCreditCards] = useState<CreditCard[]>(initialCreditCards);
-  const [creditCardTransactions, setCreditCardTransactions] = useState<CreditCardTransaction[]>(initialCreditCardTransactions);
-  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>(initialRecurringTransactions);
-  const [investments, setInvestments] = useState<Investment[]>(initialInvestments);
-  const [debts, setDebts] = useState<Debt[]>(initialDebts);
+  // Data state
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [creditCardTransactions, setCreditCardTransactions] = useState<CreditCardTransaction[]>([]);
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+
+  // Effect to load data from Supabase
+  useEffect(() => {
+    const loadData = async () => {
+        // Step 1: Check if seeding is needed for the test user
+        const { count, error: countError } = await supabase.from('accounts').select('*', { count: 'exact', head: true });
+        if (countError) {
+            console.error("Error counting accounts:", countError);
+            return;
+        }
+
+        if (user.email === 'teste@teste.com' && count === 0) {
+            await seedTestData(user.id);
+        }
+
+        // Step 2: Fetch all data in parallel
+        const [
+            accountsRes, categoriesRes, peopleRes, transactionsRes, 
+            goalsRes, creditCardsRes, creditCardTransactionsRes
+            // Add other fetches here (recurring, investments, debts) when their tables are ready
+        ] = await Promise.all([
+            supabase.from('accounts').select('*'),
+            supabase.from('categories').select('*'),
+            supabase.from('people').select('*'),
+            supabase.from('transactions').select('*'),
+            supabase.from('goals').select('*'),
+            supabase.from('credit_cards').select('*'),
+            supabase.from('credit_card_transactions').select('*'),
+        ]);
+
+        // Step 3: Process and set all state
+        const accountsData = accountsRes.data || [];
+        const categoriesData = categoriesRes.data || [];
+        const peopleData = peopleRes.data || [];
+
+        // Set base data
+        setAccounts(accountsData.map(a => ({ id: a.id, name: a.name, initialBalance: a.initial_balance })));
+        setCategories(categoriesData.map(c => ({ id: c.id, name: c.name, type: c.type || undefined })));
+        setPeople(peopleData.map(p => ({ id: p.id, name: p.name })));
+        setGoals(goalsRes.data?.map(g => ({ id: g.id, name: g.name, targetAmount: g.target_amount, currentAmount: g.current_amount })) || []);
+        setCreditCards(creditCardsRes.data?.map(c => ({
+            id: c.id, name: c.name, bank: c.bank, brand: c.brand, last4Digits: c.last_4_digits,
+            limit: c.limit, closingDay: c.closing_day, dueDate: c.due_date, color: c.color, accountId: c.account_id
+        })) || []);
+
+        // Set dependent data (with mapping)
+        if (transactionsRes.data) {
+            const formattedTxs = transactionsRes.data.map(t => ({
+                id: t.id,
+                type: t.type,
+                description: t.description,
+                amount: t.amount,
+                date: t.date,
+                account: accountsData.find(a => a.id === t.account_id)?.name || 'Desconhecida',
+                category: categoriesData.find(c => c.id === t.category_id)?.name || 'Desconhecida',
+                notes: t.notes,
+            }));
+            setTransactions(formattedTxs.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        }
+         if (creditCardTransactionsRes.data) {
+            const formattedCardTxs = creditCardTransactionsRes.data.map(t => ({
+                id: t.id, cardId: t.card_id, description: t.description, amount: t.amount, date: t.date,
+                personId: t.person_id || undefined,
+                category: categoriesData.find(c => c.id === t.category_id)?.name || 'Desconhecida',
+                notes: t.notes || undefined,
+                paid: t.paid,
+                groupId: t.group_id || undefined,
+                installmentInfo: t.installment_current && t.installment_total ? { current: t.installment_current, total: t.installment_total } : undefined,
+             }));
+            setCreditCardTransactions(formattedCardTxs);
+        }
+    };
+
+    loadData();
+}, [session, user]);
 
 
   // State for actions
   const [cardTxModalDefaultId, setCardTxModalDefaultId] = useState<string>();
   const [deletionTarget, setDeletionTarget] = useState<DeletionTarget>(null);
   const [editingTarget, setEditingTarget] = useState<EditingTarget>(null);
-  const [areValuesVisible, setAreValuesVisible] = useState(true);
+  const [areValuesVisible, setAreValuesVisible] = useState(true); // TODO: load from user settings later
   const [summaryPeriod, setSummaryPeriod] = useState<'monthly' | 'overall'>('monthly');
   const [targetGoal, setTargetGoal] = useState<Goal | null>(null);
   const [expandedDebtId, setExpandedDebtId] = useState<string | null>(null);
   const [expectationDate, setExpectationDate] = useState<string | null>(null);
   const [transactionsSubView, setTransactionsSubView] = useState<'current' | 'recurring'>('current');
   const [patrimonioSubView, setPatrimonioSubView] = useState<'investments' | 'debts'>('investments');
+  
+  const selectedCardIdRef = useRef<string | null>(creditCards[0]?.id || null);
+  const currentCardMonthIndexRef = useRef(0);
+
+  const setSelectedCardId = (id: string | null) => {
+    if (selectedCardIdRef.current !== id) {
+        currentCardMonthIndexRef.current = 0;
+    }
+    selectedCardIdRef.current = id;
+    forceUpdate({});
+  };
+  const setCurrentCardMonthIndex = (index: number) => {
+      currentCardMonthIndexRef.current = index;
+      forceUpdate({});
+  };
+  
+  const [, forceUpdate] = useState({});
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  }
+
+  useEffect(() => {
+    const handleWheel = (event: WheelEvent) => {
+      if (event.target instanceof HTMLInputElement && event.target.type === 'number' && document.activeElement === event.target) {
+        event.target.blur();
+      }
+    };
+    document.addEventListener('wheel', handleWheel);
+    return () => {
+      document.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
 
   
+  const nextInstallmentRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  useEffect(() => {
+    if (expandedDebtId) {
+        const timeoutId = setTimeout(() => {
+            const element = nextInstallmentRefs.current.get(expandedDebtId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 350);
+        return () => clearTimeout(timeoutId);
+    }
+  }, [expandedDebtId]);
+
   const availableTransactionMonths = useMemo(() => {
     const months = new Set<string>();
     transactions.forEach(t => {
@@ -210,10 +327,10 @@ const App: React.FC = () => {
 
   const previousMonthBalance = useMemo(() => {
     if (availableTransactionMonths.length === 0) {
-      return accounts.reduce((sum, acc) => sum + acc.initialBalance, 0);
+      return accounts.reduce((sum, acc) => sum + Number(acc.initialBalance), 0);
     }
     const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const totalInitialBalance = accounts.reduce((sum, acc) => sum + acc.initialBalance, 0);
+    const totalInitialBalance = accounts.reduce((sum, acc) => sum + Number(acc.initialBalance), 0);
     const historicalBalanceChange = transactions
       .filter(t => new Date(t.date + 'T12:00:00') < startOfMonth)
       .reduce((sum, t) => t.type === TransactionType.ENTRADA ? sum + t.amount : sum - t.amount, 0);
@@ -235,13 +352,13 @@ const App: React.FC = () => {
       return { totalIncome: monthlyIncome, totalExpenses: monthlyExpenses, balance: previousMonthBalance + monthlyIncome - monthlyExpenses };
     }
     // Overall
-    const totalInitialBalance = accounts.reduce((sum, acc) => sum + acc.initialBalance, 0);
+    const totalInitialBalance = accounts.reduce((sum, acc) => sum + Number(acc.initialBalance), 0);
     const overallIncome = transactions.filter(t => t.type === TransactionType.ENTRADA).reduce((sum, t) => sum + t.amount, 0);
     const overallExpenses = transactions.filter(t => t.type === TransactionType.SAIDA).reduce((sum, t) => sum + t.amount, 0);
     return { totalIncome: overallIncome, totalExpenses: overallExpenses, balance: totalInitialBalance + overallIncome - overallExpenses };
   }, [summaryPeriod, monthlyTransactions, transactions, previousMonthBalance, accounts]);
 
-  
+  // TODO: Refactor these functions to use Supabase
   const addTransaction = (transaction: Omit<Transaction, 'id'>) => setTransactions(prev => [{ ...transaction, id: crypto.randomUUID() }, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   const addPerson = (person: Omit<Person, 'id'>) => setPeople(prev => [{ ...person, id: crypto.randomUUID() }, ...prev]);
   const addCreditCard = (card: Omit<CreditCard, 'id'>) => setCreditCards(prev => [{ ...card, id: crypto.randomUUID() }, ...prev]);
@@ -251,16 +368,6 @@ const App: React.FC = () => {
   const addInvestment = (inv: Omit<Investment, 'id'>) => setInvestments(prev => [{...inv, id: crypto.randomUUID()}, ...prev]);
   const addDebt = (debt: Omit<Debt, 'id'>) => setDebts(prev => [{...debt, id: crypto.randomUUID()}, ...prev]);
 
-  const handleImportTransactions = (importedTransactions: ParsedTransaction[], accountName: string) => {
-    const newTransactions = importedTransactions.map(t => ({
-      ...t,
-      id: crypto.randomUUID(),
-      account: accountName,
-      category: 'Importado',
-    }));
-    setTransactions(prev => [...prev, ...newTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    setImportModalOpen(false);
-  };
   
   const handleTransfer = (fromAccountId: string, toAccountId: string, amount: number, date: string) => {
     const fromAccount = accounts.find(a => a.id === fromAccountId);
@@ -332,6 +439,64 @@ const App: React.FC = () => {
         setCreditCardTransactions(prev => [{ ...tx, id: crypto.randomUUID(), paid: false }, ...prev]);
     }
   };
+
+    const handleAddSplitTransaction = (
+        baseTxData: Omit<CreditCardTransaction, 'id' | 'paid' | 'personId' | 'amount'>,
+        totalAmount: number,
+        peopleToSplit: { id: string | null; name: string }[],
+        installments: number
+    ) => {
+        // 1. Handle new people
+        const newPeopleNames = peopleToSplit.filter(p => p.id === null).map(p => p.name);
+        const newlyCreatedPeople = newPeopleNames.map(name => ({ id: crypto.randomUUID(), name }));
+
+        if (newlyCreatedPeople.length > 0) {
+            setPeople(prev => [...prev, ...newlyCreatedPeople]);
+        }
+
+        // 2. Combine all people for this transaction
+        const existingPeople = people.filter(p => peopleToSplit.some(sp => sp.id === p.id));
+        const allPeopleInSplit = [...existingPeople, ...newlyCreatedPeople];
+
+        if (allPeopleInSplit.length === 0) return;
+
+        // 3. Calculate amounts
+        const amountPerPerson = totalAmount / allPeopleInSplit.length;
+
+        // 4. Create all transactions (including installments)
+        const allNewTransactions: CreditCardTransaction[] = [];
+        const groupId = installments > 1 ? crypto.randomUUID() : undefined;
+        const originalDate = new Date(baseTxData.date + 'T12:00:00');
+
+        allPeopleInSplit.forEach(person => {
+            for (let i = 0; i < installments; i++) {
+                const installmentDate = new Date(originalDate);
+                installmentDate.setMonth(originalDate.getMonth() + i);
+
+                let description = baseTxData.description;
+                if (installments > 1) {
+                    description += ` (${i + 1}/${installments})`;
+                }
+                description += ` - ${person.name}`;
+                
+                const finalAmount = installments > 1 ? amountPerPerson / installments : amountPerPerson;
+
+                allNewTransactions.push({
+                    ...baseTxData,
+                    id: crypto.randomUUID(),
+                    personId: person.id,
+                    amount: finalAmount,
+                    date: installmentDate.toISOString().split('T')[0],
+                    description,
+                    groupId,
+                    installmentInfo: installments > 1 ? { current: i + 1, total: installments } : undefined,
+                    paid: false,
+                });
+            }
+        });
+
+        setCreditCardTransactions(prev => [...allNewTransactions, ...prev]);
+    };
 
   const handleEditTransaction = (updatedTx: Transaction) => { setTransactions(prev => prev.map(t => t.id === updatedTx.id ? updatedTx : t)); setEditingTarget(null); };
   const handleEditCardTransaction = (updatedTx: CreditCardTransaction) => { setCreditCardTransactions(prev => prev.map(t => t.id === updatedTx.id ? updatedTx : t)); setEditingTarget(null); };
@@ -406,7 +571,10 @@ const App: React.FC = () => {
         break;
       case 'recurringTransaction': setRecurringTransactions(prev => prev.filter(rt => rt.id !== deletionTarget.id)); break;
       case 'investment': setInvestments(prev => prev.filter(inv => inv.id !== deletionTarget.id)); break;
-      case 'debt': setDebts(prev => prev.filter(d => d.id !== deletionTarget.id)); break;
+      case 'debt': 
+        setDebts(prev => prev.filter(d => d.id !== deletionTarget.id)); 
+        nextInstallmentRefs.current.delete(deletionTarget.id);
+        break;
     }
     setDeletionTarget(null);
     setConfirmationModalOpen(false);
@@ -431,7 +599,7 @@ const App: React.FC = () => {
 
   const closeModals = () => {
     setTxModalOpen(false); setAddCardModalOpen(false); setAddCardTxModalOpen(false); setGoalModalOpen(false); setAddValueModalOpen(false);
-    setRecurringTxModalOpen(false); setInvestmentModalOpen(false); setDebtModalOpen(false); setImportModalOpen(false); setTransferModalOpen(false);
+    setRecurringTxModalOpen(false); setInvestmentModalOpen(false); setDebtModalOpen(false); setTransferModalOpen(false);
     setEditingTarget(null); setTargetGoal(null);
   }
 
@@ -442,7 +610,7 @@ const App: React.FC = () => {
                     return t.type === TransactionType.ENTRADA ? acc + t.amount : acc - t.amount;
                 }
                 return acc;
-            }, account.initialBalance);
+            }, Number(account.initialBalance));
             return { ...account, currentBalance: balance };
         });
     }, [accounts, transactions]);
@@ -461,7 +629,6 @@ const App: React.FC = () => {
             projections[acc.id] = acc.currentBalance;
         });
 
-        // 1. Recurring Transactions
         recurringTransactions.forEach(rt => {
             let nextDueDate = new Date(rt.nextDueDate + 'T12:00:00');
             const account = accounts.find(a => a.name === rt.account);
@@ -486,7 +653,6 @@ const App: React.FC = () => {
             }
         });
 
-        // 2. Credit Card Invoices
         creditCards.forEach(card => {
             const unpaidTxs = creditCardTransactions.filter(tx => tx.cardId === card.id && !tx.paid);
             if (unpaidTxs.length === 0) return;
@@ -500,7 +666,7 @@ const App: React.FC = () => {
                 if (dueDateInMonth > today && dueDateInMonth <= targetDate) {
                     const closingDate = new Date(dueDateInMonth);
                     closingDate.setDate(card.closingDay);
-                    if (card.dueDate < card.closingDay) { // Invoice is for previous month's transactions
+                    if (card.dueDate < card.closingDay) {
                          closingDate.setMonth(closingDate.getMonth() - 1);
                     }
                    
@@ -523,7 +689,6 @@ const App: React.FC = () => {
             }
         });
 
-        // 3. Debts
         debts.forEach(debt => {
             const installmentValue = debt.totalAmount / debt.numberOfInstallments;
             for (let i = debt.paidInstallments; i < debt.numberOfInstallments; i++) {
@@ -543,17 +708,20 @@ const App: React.FC = () => {
         }));
     }, [expectationDate, accountBalances, recurringTransactions, creditCards, creditCardTransactions, debts, accounts]);
 
+  const renderSimpleActiveShape = (props: any) => {
+    return <Sector {...props} />;
+  };
 
   const renderView = () => {
     switch (activeView) {
       case 'dashboard': return <DashboardView />;
       case 'transactions': return <TransactionsView />;
       case 'goals': return <GoalsView />;
-      case 'analysis': return <SmartAnalysis transactions={transactions} creditCardTransactions={creditCardTransactions}/>;
       case 'cards': return <CardsView />;
       case 'people': return <PeopleView />;
       case 'accounts': return <AccountsView />;
       case 'patrimonio': return <PatrimonioView />;
+      case 'settings': return <SettingsView user={user} />;
       default: return <DashboardView />;
     }
   };
@@ -575,7 +743,7 @@ const App: React.FC = () => {
             .reduce((acc, t) => {
                 acc[t.category] = (acc[t.category] || 0) + t.amount;
                 return acc;
-            }, {} as {[key: string]: number});
+            }, {} as {[key:string]: number});
         return Object.entries(dataByCategory).map(([name, value]) => ({ name, value }));
     }, [displayTransactions, filteredCreditCardTransactions]);
     
@@ -584,7 +752,7 @@ const App: React.FC = () => {
         return totalIncome > 0 || totalExpenses > 0 || totalCardExpenses > 0;
     }, [totalIncome, totalExpenses, filteredCreditCardTransactions]);
 
-    const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#ef4444'];
+    const COLORS = ['#ef4444', '#10b981', '#ec4899', '#3b82f6', '#8b5cf6', '#f59e0b'];
     const chartTooltipFormatter = (value: number) => areValuesVisible ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value) : 'R$ ****,**';
     
     const RADIAN = Math.PI / 180;
@@ -599,31 +767,31 @@ const App: React.FC = () => {
         if (percent === undefined || percent < 0.02 || cx === undefined || cy === undefined || midAngle === undefined || outerRadius === undefined) {
             return null;
         }
-        const radius = outerRadius + 25; // Position label outside the pie
+        const radius = outerRadius + 25;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
         return (
-            <text x={x} y={y} fill="#94a3b8" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
+            <text x={x} y={y} fill="#ffffff" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={12}>
                 {value}
             </text>
         );
     };
 
     return (
-        <div className="space-y-10 flex flex-col">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 order-1 sm:order-2">
+        <div className="gap-10 flex flex-col">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 order-1 sm:order-2">
                 <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
                     <h3 className="text-sm font-medium text-emerald-400 mb-1">Receita</h3>
-                    <p className="text-3xl font-semibold text-white">{formatCurrency(totalIncome)}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white">{formatCurrency(totalIncome)}</p>
                 </div>
                 <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
                     <h3 className="text-sm font-medium text-rose-400 mb-1">Despesa</h3>
-                    <p className="text-3xl font-semibold text-white">{formatCurrency(totalExpenses)}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white">{formatCurrency(totalExpenses)}</p>
                 </div>
-                <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
+                <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl sm:col-span-2 lg:col-span-1">
                     <h3 className="text-sm font-medium text-indigo-400 mb-1">Saldo Final</h3>
-                    <p className="text-3xl font-semibold text-white">{formatCurrency(balance)}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white">{formatCurrency(balance)}</p>
                 </div>
             </div>
              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 order-2 sm:order-1">
@@ -665,10 +833,16 @@ const App: React.FC = () => {
                                       fill="#8884d8" 
                                       labelLine={areValuesVisible}
                                       label={areValuesVisible ? renderCustomizedPieLabel : false}
+                                      activeShape={renderSimpleActiveShape}
                                   >
                                       {expenseData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                                   </Pie>
-                                  <Tooltip formatter={chartTooltipFormatter} contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }} />
+                                  <Tooltip 
+                                    formatter={chartTooltipFormatter} 
+                                    contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid #475569', borderRadius: '0.5rem' }}
+                                    itemStyle={{ color: '#ffffff' }}
+                                    cursor={false}
+                                  />
                                   <Legend />
                               </PieChart>
                           </ResponsiveContainer>
@@ -707,9 +881,6 @@ const App: React.FC = () => {
             </div>
             {transactionsSubView === 'current' ? (
                  <div className="flex items-center gap-2 flex-wrap">
-                    <button onClick={() => setImportModalOpen(true)} className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors text-sm">
-                        <Icon name="file-import" className="mr-2"/> Importar Extrato
-                    </button>
                     <div className="flex items-center gap-2">
                         {summaryPeriod === 'monthly' && (
                             <>
@@ -732,32 +903,38 @@ const App: React.FC = () => {
        {transactionsSubView === 'current' ? (
         <>
             {displayTransactions.length > 0 ? (
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
-                                <th className="py-3 px-4 font-medium">Descrição</th> <th className="py-3 px-4 font-medium">Valor</th>
-                                <th className="py-3 px-4 hidden md:table-cell font-medium">Data</th> <th className="py-3 px-4 hidden lg:table-cell font-medium">Categoria</th>
-                                <th className="py-3 px-4 hidden lg:table-cell font-medium">Conta</th>
-                                <th className="py-3 px-4 font-medium text-right">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {displayTransactions.map(t => (
-                                <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800">
-                                    <td className="py-4 px-4 font-medium text-white">{t.description}</td>
-                                    <td className={`py-4 px-4 font-bold ${t.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(t.amount)} </td>
-                                    <td className="py-4 px-4 text-slate-300 hidden md:table-cell">{new Date(t.date).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-                                    <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{t.category}</td>
-                                    <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{t.account}</td>
-                                    <td className="py-4 px-4 space-x-4 text-right">
-                                        <button onClick={() => openEditModal(t, 'transaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
-                                        <button onClick={() => { setDeletionTarget({ id: t.id, type: 'transaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
-                                    </td>
+                <div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left min-w-[600px] md:min-w-0">
+                            <thead>
+                                <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
+                                    <th className="py-3 px-2 md:px-4 font-medium">Descrição</th>
+                                    <th className="py-3 px-2 md:px-4 font-medium">Valor</th>
+                                    <th className="py-3 px-2 md:px-4 font-medium">Data</th>
+                                    <th className="py-3 px-2 md:px-4 font-medium hidden md:table-cell">Categoria</th>
+                                    <th className="py-3 px-2 md:px-4 font-medium hidden md:table-cell">Conta</th>
+                                    <th className="py-3 px-2 md:px-4 font-medium text-right">Ações</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {displayTransactions.map(t => (
+                                    <tr key={t.id} className="border-b border-slate-800 hover:bg-slate-800">
+                                        <td className="py-3 px-2 md:p-4 font-medium text-white max-w-28 sm:max-w-xs break-words">{t.description}</td>
+                                        <td className={`py-3 px-2 md:p-4 font-bold whitespace-nowrap ${t.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(t.amount)} </td>
+                                        <td className="py-3 px-2 md:p-4 text-slate-300">{new Date(t.date).toLocaleDateString('pt-BR', {timeZone: 'UTC', day: '2-digit', month: '2-digit'})}</td>
+                                        <td className="py-3 px-2 md:p-4 text-slate-300 hidden md:table-cell">{t.category}</td>
+                                        <td className="py-3 px-2 md:p-4 text-slate-300 hidden md:table-cell">{t.account}</td>
+                                        <td className="py-3 px-2 md:p-4">
+                                            <div className="flex items-center justify-end gap-x-3 sm:gap-x-4">
+                                                <button onClick={() => openEditModal(t, 'transaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
+                                                <button onClick={() => { setDeletionTarget({ id: t.id, type: 'transaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             ) : (
                 <EmptyState 
@@ -770,27 +947,31 @@ const App: React.FC = () => {
        ) : (
         <>
             {recurringTransactions.length > 0 ? (
-                <div className="overflow-x-auto">
+                <div>
                      <table className="w-full text-left">
                         <thead>
                             <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
-                                <th className="py-3 px-4 font-medium">Descrição</th> <th className="py-3 px-4 font-medium">Valor</th>
-                                <th className="py-3 px-4 hidden md:table-cell font-medium">Frequência</th> <th className="py-3 px-4 hidden lg:table-cell font-medium">Próximo Vencimento</th>
-                                <th className="py-3 px-4 hidden lg:table-cell font-medium">Conta</th>
-                                <th className="py-3 px-4 font-medium text-right">Ações</th>
+                                <th className="py-3 px-2 md:px-4 font-medium">Descrição</th>
+                                <th className="py-3 px-2 md:px-4 font-medium">Valor</th>
+                                <th className="py-3 px-2 md:px-4 hidden md:table-cell font-medium">Frequência</th>
+                                <th className="py-3 px-2 md:px-4 hidden lg:table-cell font-medium">Próximo Vencimento</th>
+                                <th className="py-3 px-2 md:px-4 hidden lg:table-cell font-medium">Conta</th>
+                                <th className="py-3 px-2 md:px-4 font-medium text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {recurringTransactions.map(rt => (
                                  <tr key={rt.id} className="border-b border-slate-800 hover:bg-slate-800">
-                                   <td className="py-4 px-4 font-medium text-white">{rt.description}</td>
-                                   <td className={`py-4 px-4 font-bold ${rt.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(rt.amount)} </td>
-                                   <td className="py-4 px-4 text-slate-300 hidden md:table-cell">{rt.frequency}</td>
-                                   <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{new Date(rt.nextDueDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
-                                   <td className="py-4 px-4 text-slate-300 hidden lg:table-cell">{rt.account}</td>
-                                   <td className="py-4 px-4 space-x-4 text-right">
-                                       <button onClick={() => openEditModal(rt, 'recurringTransaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
-                                       <button onClick={() => { setDeletionTarget({ id: rt.id, type: 'recurringTransaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+                                   <td className="py-3 md:py-4 px-2 md:px-4 font-medium text-white max-w-28 sm:max-w-xs break-words">{rt.description}</td>
+                                   <td className={`py-3 md:py-4 px-2 md:px-4 font-bold whitespace-nowrap ${rt.type === TransactionType.ENTRADA ? 'text-emerald-400' : 'text-rose-400'}`}> {formatCurrency(rt.amount)} </td>
+                                   <td className="py-3 md:py-4 px-2 md:px-4 text-slate-300 hidden md:table-cell">{rt.frequency}</td>
+                                   <td className="py-3 md:py-4 px-2 md:px-4 text-slate-300 hidden lg:table-cell">{new Date(rt.nextDueDate).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}</td>
+                                   <td className="py-3 md:py-4 px-2 md:px-4 text-slate-300 hidden lg:table-cell">{rt.account}</td>
+                                   <td className="py-3 md:py-4 px-2 md:px-4">
+                                       <div className="flex items-center justify-end gap-3">
+                                           <button onClick={() => openEditModal(rt, 'recurringTransaction')} className="text-slate-400 hover:text-indigo-400 transition-colors"><Icon name="pencil"/></button>
+                                           <button onClick={() => { setDeletionTarget({ id: rt.id, type: 'recurringTransaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors"><Icon name="trash"/></button>
+                                       </div>
                                    </td>
                                </tr>
                             ))}
@@ -1050,9 +1231,10 @@ const App: React.FC = () => {
   }
 
   const CardsView = () => {
-    const [selectedCardId, setSelectedCardId] = useState<string | null>(creditCards[0]?.id || null);
+    const selectedCardId = selectedCardIdRef.current;
+    const currentCardMonthIndex = currentCardMonthIndexRef.current;
 
-    const availableMonths = useMemo(() => {
+    const availableMonthsForSelectedCard = useMemo(() => {
         if (!selectedCardId) return [];
         const cardTransactions = creditCardTransactions.filter(t => t.cardId === selectedCardId);
         const selectedCard = creditCards.find(c => c.id === selectedCardId);
@@ -1074,12 +1256,19 @@ const App: React.FC = () => {
             months.add(`${statementYear}-${String(statementMonth + 1).padStart(2, '0')}`);
         });
         
-        return Array.from(months).map(m => new Date(m + '-02T12:00:00')).sort((a, b) => b.getTime() - a.getTime());
+        const sortedMonths = Array.from(months)
+            .map(m => new Date(m + '-02T12:00:00'))
+            .sort((a, b) => b.getTime() - a.getTime());
+
+        if (currentCardMonthIndexRef.current >= sortedMonths.length && sortedMonths.length > 0) {
+           currentCardMonthIndexRef.current = 0;
+        }
+
+        return sortedMonths;
     }, [selectedCardId, creditCardTransactions, creditCards]);
-    
-    const [currentCardMonthIndex, setCurrentCardMonthIndex] = useState(0);
-    const statementDate = availableMonths[currentCardMonthIndex] || new Date();
-    const selectedCard = useMemo(() => creditCards.find(c => c.id === selectedCardId), [selectedCardId]);
+
+    const statementDate = availableMonthsForSelectedCard[currentCardMonthIndex] || new Date();
+    const selectedCard = creditCards.find(c => c.id === selectedCardId);
 
     const { statementClosingDate, statementDueDate } = useMemo(() => {
         if (!selectedCard) {
@@ -1105,22 +1294,39 @@ const App: React.FC = () => {
     }, [selectedCard, statementDate]);
 
     const { statementTransactions, total, totalByPerson, isStatementPaid } = useMemo(() => {
-        if (!selectedCard || availableMonths.length === 0) return { statementTransactions: [], total: 0, totalByPerson: [], isStatementPaid: false };
-        
-        const year = statementDate.getFullYear();
-        const month = statementDate.getMonth();
-        const endDate = new Date(year, month, selectedCard.closingDay, 23, 59, 59);
-        const startDate = new Date(year, month - 1, selectedCard.closingDay + 1, 0, 0, 0);
+        if (!selectedCard) {
+            return { statementTransactions: [], total: 0, totalByPerson: [], isStatementPaid: false };
+        }
+
+        const statementYear = statementDate.getFullYear();
+        const statementMonth = statementDate.getMonth();
 
         const filtered = creditCardTransactions.filter(t => {
+            if (t.cardId !== selectedCard.id) return false;
+
             const txDate = new Date(t.date + 'T12:00:00');
-            return t.cardId === selectedCard.id && txDate >= startDate && txDate <= endDate;
+            let txStatementYear = txDate.getFullYear();
+            let txStatementMonth = txDate.getMonth();
+
+            // Logic to determine which statement the transaction belongs to
+            if (txDate.getDate() > selectedCard.closingDay) {
+                txStatementMonth += 1;
+                if (txStatementMonth > 11) {
+                    txStatementMonth = 0;
+                    txStatementYear += 1;
+                }
+            }
+            
+            return txStatementYear === statementYear && txStatementMonth === statementMonth;
         });
 
         const byPerson = filtered.reduce((acc, t) => {
             if (t.personId) {
                 const personName = people.find(p => p.id === t.personId)?.name || 'Não especificado';
                 acc[personName] = (acc[personName] || 0) + t.amount;
+            } else {
+                 const ownerName = 'Você';
+                 acc[ownerName] = (acc[ownerName] || 0) + t.amount;
             }
             return acc;
         }, {} as {[key: string]: number});
@@ -1131,7 +1337,8 @@ const App: React.FC = () => {
             totalByPerson: Object.entries(byPerson).map(([name, amount]) => ({ name, amount })),
             isStatementPaid: filtered.length > 0 && filtered.every(t => t.paid),
         };
-    }, [selectedCard, statementDate, creditCardTransactions, people, availableMonths]);
+    }, [selectedCard, statementDate, creditCardTransactions, people]);
+
 
     const { usedLimit, availableLimit } = useMemo(() => {
       if (!selectedCard) return { usedLimit: 0, availableLimit: 0 };
@@ -1174,8 +1381,6 @@ const App: React.FC = () => {
         });
         setConfirmationModalOpen(true);
     }
-    
-    useEffect(() => { if (selectedCardId) { setCurrentCardMonthIndex(0); } }, [selectedCardId, availableMonths.length]);
 
     return (
         <div className="space-y-8">
@@ -1218,9 +1423,9 @@ const App: React.FC = () => {
                                <div className="flex-1">
                                     <h3 className="text-xl font-bold text-white">Fatura de {selectedCard.name}</h3>
                                     <div className="flex items-center gap-2 mt-2">
-                                        <button onClick={() => setCurrentCardMonthIndex(prev => prev + 1)} disabled={currentCardMonthIndex >= availableMonths.length - 1} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-left"/></button>
-                                        <span className="font-semibold w-36 text-center capitalize">{availableMonths.length > 0 ? statementDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'Sem Faturas'}</span>
-                                        <button onClick={() => setCurrentCardMonthIndex(prev => prev - 1)} disabled={currentCardMonthIndex <= 0} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-right"/></button>
+                                        <button onClick={() => setCurrentCardMonthIndex(Math.min(currentCardMonthIndex + 1, availableMonthsForSelectedCard.length - 1))} disabled={currentCardMonthIndex >= availableMonthsForSelectedCard.length - 1} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-left"/></button>
+                                        <span className="font-semibold w-36 text-center capitalize">{availableMonthsForSelectedCard.length > 0 ? statementDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'Sem Faturas'}</span>
+                                        <button onClick={() => setCurrentCardMonthIndex(Math.max(currentCardMonthIndex - 1, 0))} disabled={currentCardMonthIndex <= 0} className="p-2 bg-slate-700 rounded-md hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"><Icon name="chevron-right"/></button>
                                     </div>
                                </div>
                                <div className="text-left sm:text-right">
@@ -1271,7 +1476,7 @@ const App: React.FC = () => {
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <p className={`font-bold ${t.paid ? 'text-emerald-400' : areValuesVisible ? 'text-rose-400' : 'text-slate-200'}`}>{formatCurrency(t.amount)}</p>
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity space-x-2">
+                                            <div className="flex items-center gap-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button onClick={() => openEditModal(t, 'cardTransaction')} className="text-slate-400 hover:text-indigo-400 transition-colors" disabled={t.paid}><Icon name="pencil"/></button>
                                                 <button onClick={() => { setDeletionTarget({ id: t.id, type: 'cardTransaction' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400 transition-colors" disabled={t.paid}><Icon name="trash"/></button>
                                             </div>
@@ -1306,18 +1511,18 @@ const App: React.FC = () => {
 
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                  <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
                     <h3 className="text-sm font-medium text-cyan-400 mb-1">Total Investido</h3>
-                    <p className="text-3xl font-semibold text-white">{formatCurrency(totalInvestments)}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white">{formatCurrency(totalInvestments)}</p>
                 </div>
                 <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
                     <h3 className="text-sm font-medium text-amber-400 mb-1">Total Dívidas</h3>
-                    <p className="text-3xl font-semibold text-white">{formatCurrency(totalDebts)}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white">{formatCurrency(totalDebts)}</p>
                 </div>
                 <div className="bg-slate-800/50 border border-slate-700 p-5 rounded-xl">
                     <h3 className="text-sm font-medium text-violet-400 mb-1">Patrimônio Líquido</h3>
-                    <p className="text-3xl font-semibold text-white">{formatCurrency(netWorth)}</p>
+                    <p className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white">{formatCurrency(netWorth)}</p>
                 </div>
             </div>
 
@@ -1373,91 +1578,99 @@ const App: React.FC = () => {
                 ) : (
                     <>
                         {debts.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                 <table className="w-full text-left">
-                                   <thead>
-                                        <tr className="border-b border-slate-700 text-slate-400 uppercase text-xs tracking-wider">
-                                            <th className="py-3 px-4 font-medium">Descrição</th>
-                                            <th className="py-3 px-4 hidden md:table-cell font-medium">Valor Total</th>
-                                            <th className="py-3 px-4 font-medium">Saldo Devedor</th>
-                                            <th className="py-3 px-4 font-medium text-right">Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {debts.map(debt => {
-                                            const installmentAmount = debt.totalAmount / debt.numberOfInstallments;
-                                            const remainingAmount = installmentAmount * (debt.numberOfInstallments - debt.paidInstallments);
-                                            const isExpanded = expandedDebtId === debt.id;
-                                            return (
-                                             <React.Fragment key={debt.id}>
-                                                <tr className="border-b border-slate-800 hover:bg-slate-800/70 cursor-pointer" onClick={() => setExpandedDebtId(isExpanded ? null : debt.id)}>
-                                                    <td className="py-4 px-4 font-medium text-white flex items-center">
-                                                        <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} className="mr-3 w-4 transition-transform" />
-                                                        {debt.name}
-                                                        <span className="ml-2 text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">{debt.paidInstallments}/{debt.numberOfInstallments}</span>
-                                                    </td>
-                                                    <td className="py-4 px-4 hidden md:table-cell text-slate-300">{formatCurrency(debt.totalAmount)}</td>
-                                                    <td className="py-4 px-4 font-bold text-amber-300">{formatCurrency(remainingAmount)}</td>
-                                                    <td className="py-4 px-4 text-right">
-                                                        <div className="flex items-center justify-end gap-4">
-                                                            <button onClick={(e) => { e.stopPropagation(); openEditModal(debt, 'debt'); }} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
-                                                            <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: debt.id, type: 'debt' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                {isExpanded && (
-                                                    <tr className="bg-slate-900/50">
-                                                        <td colSpan={4} className="p-4">
-                                                            <h4 className="font-semibold text-white mb-3">Detalhes das Parcelas</h4>
-                                                            <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                                                                {Array.from({ length: debt.numberOfInstallments }, (_, i) => {
-                                                                    const installmentNumber = i + 1;
-                                                                    const isPaid = installmentNumber <= debt.paidInstallments;
-                                                                    const isNext = installmentNumber === debt.paidInstallments + 1;
-                                                                    const installmentValue = debt.totalAmount / debt.numberOfInstallments;
-                                                                    
-                                                                    const dueDate = new Date(debt.firstDueDate + 'T12:00:00');
-                                                                    dueDate.setMonth(dueDate.getMonth() + i);
+                            <div className="space-y-4">
+                                {debts.map(debt => {
+                                    const installmentAmount = debt.totalAmount / debt.numberOfInstallments;
+                                    const remainingAmount = installmentAmount * (debt.numberOfInstallments - debt.paidInstallments);
+                                    const progress = (debt.paidInstallments / debt.numberOfInstallments) * 100;
+                                    const isExpanded = expandedDebtId === debt.id;
 
-                                                                    return (
-                                                                        <div key={i} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-slate-800 p-2.5 rounded-lg text-sm">
-                                                                            <div>
-                                                                                <span className={`font-semibold ${isPaid ? 'text-slate-400 line-through' : 'text-white'}`}>
-                                                                                    {installmentNumber}ª Parcela
-                                                                                </span>
-                                                                                <span className="text-slate-400 ml-4">
-                                                                                    Venc.: {dueDate.toLocaleDateString('pt-BR')}
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-4">
-                                                                                <span className={`font-bold ${isPaid ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                                                                    {formatCurrency(installmentValue)}
-                                                                                </span>
-                                                                                {isPaid ? (
-                                                                                    <span className="text-emerald-500 font-bold flex items-center gap-1.5 text-xs"><Icon name="check-circle" /> Paga</span>
-                                                                                ) : isNext ? (
-                                                                                    <button 
-                                                                                        onClick={() => handlePayInstallment(debt)}
-                                                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-md transition-colors text-xs"
-                                                                                    >
-                                                                                        Pagar
-                                                                                    </button>
-                                                                                ) : (
-                                                                                    <span className="text-slate-500 font-medium px-3 py-1.5 text-xs">A Vencer</span>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                             </React.Fragment>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                    return (
+                                        <div key={debt.id} className="bg-slate-800 rounded-xl border border-slate-700/80 overflow-hidden transition-all duration-300">
+                                            <div 
+                                                className="p-4 cursor-pointer hover:bg-slate-700/50"
+                                                onClick={() => setExpandedDebtId(isExpanded ? null : debt.id)}
+                                            >
+                                                <div className="flex justify-between items-start gap-4">
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} className="w-4 transition-transform flex-shrink-0 text-slate-400" />
+                                                        <h3 className="font-bold text-white truncate flex-1">{debt.name}</h3>
+                                                    </div>
+                                                    <div className="flex gap-3 flex-shrink-0">
+                                                        <button onClick={(e) => { e.stopPropagation(); openEditModal(debt, 'debt'); }} className="text-slate-400 hover:text-indigo-400"><Icon name="pencil"/></button>
+                                                        <button onClick={(e) => { e.stopPropagation(); setDeletionTarget({ id: debt.id, type: 'debt' }); setConfirmationModalOpen(true); }} className="text-slate-400 hover:text-rose-400"><Icon name="trash"/></button>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex justify-between items-end mt-3">
+                                                    <div>
+                                                        <p className="text-xs text-slate-400">Saldo Devedor</p>
+                                                        <p className="font-bold text-amber-300 text-xl">{formatCurrency(remainingAmount)}</p>
+                                                    </div>
+                                                    <span className="text-sm bg-slate-900/80 text-slate-300 px-2.5 py-1 rounded-full font-medium">{debt.paidInstallments}/{debt.numberOfInstallments}</span>
+                                                </div>
+
+                                                <div className="w-full bg-slate-700 rounded-full h-2 mt-4">
+                                                  <div className="bg-amber-500 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+                                                </div>
+                                            </div>
+
+                                            {isExpanded && (
+                                                <div className="bg-slate-900/70 p-4 border-t border-slate-700/80 animate-fade-in-up" style={{animationDuration: '300ms'}}>
+                                                    <h4 className="font-semibold text-white mb-3">Detalhes das Parcelas</h4>
+                                                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                                                        {Array.from({ length: debt.numberOfInstallments }, (_, i) => {
+                                                            const installmentNumber = i + 1;
+                                                            const isPaid = installmentNumber <= debt.paidInstallments;
+                                                            const isNext = installmentNumber === debt.paidInstallments + 1;
+                                                            const installmentValue = debt.totalAmount / debt.numberOfInstallments;
+                                                            
+                                                            const dueDate = new Date(debt.firstDueDate + 'T12:00:00');
+                                                            dueDate.setMonth(dueDate.getMonth() + i);
+
+                                                            return (
+                                                                <div 
+                                                                    key={i} 
+                                                                    // FIX: The ref callback function must not return a value. 
+                                                                    // The `set` method on a Map returns the map itself, which was causing a type error.
+                                                                    // Wrapping the call in curly braces makes the function implicitly return undefined.
+                                                                    ref={isNext ? (el) => { nextInstallmentRefs.current.set(debt.id, el); } : null}
+                                                                    className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-slate-800 p-2.5 rounded-lg text-sm"
+                                                                >
+                                                                    <div>
+                                                                        <span className={`font-semibold ${isPaid ? 'text-slate-400 line-through' : 'text-white'}`}>
+                                                                            {installmentNumber}ª Parcela
+                                                                        </span>
+                                                                        <span className="text-slate-400 ml-4">
+                                                                            Venc.: {dueDate.toLocaleDateString('pt-BR')}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-4">
+                                                                        <span className={`font-bold ${isPaid ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                                                            {formatCurrency(installmentValue)}
+                                                                        </span>
+                                                                        {isPaid ? (
+                                                                            <span className="text-emerald-500 font-bold flex items-center gap-1.5 text-xs"><Icon name="check-circle" /> Paga</span>
+                                                                        ) : isNext ? (
+                                                                            <button 
+                                                                                onClick={() => handlePayInstallment(debt)}
+                                                                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-md transition-colors text-xs"
+                                                                            >
+                                                                                Pagar
+                                                                            </button>
+                                                                        ) : (
+                                                                            <span className="text-slate-500 font-medium px-3 py-1.5 text-xs">A Vencer</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <EmptyState
@@ -1468,6 +1681,131 @@ const App: React.FC = () => {
                         )}
                     </>
                 )}
+            </div>
+        </div>
+    );
+  }
+  
+  const SettingsView: React.FC<{ user: SupabaseUser }> = ({ user }) => {
+    const [name, setName] = useState(user.user_metadata.full_name || '');
+    const [email] = useState(user.email || '');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmNewPassword, setConfirmNewPassword] = useState('');
+    const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+
+    const handleProfileUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const { error } = await supabase.auth.updateUser({ data: { full_name: name } });
+        if (error) {
+            setMessage({ type: 'error', text: 'Erro ao atualizar perfil.' });
+        } else {
+            setMessage({ type: 'success', text: 'Perfil atualizado com sucesso!'});
+        }
+        setTimeout(() => setMessage(null), 3000);
+    };
+
+    const handlePasswordChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage(null);
+
+        if (newPassword.length < 6) {
+            setMessage({ type: 'error', text: 'A nova senha deve ter pelo menos 6 caracteres.' });
+            return;
+        }
+        if (newPassword !== confirmNewPassword) {
+            setMessage({ type: 'error', text: 'As novas senhas não coincidem.' });
+            return;
+        }
+        
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+        if (error) {
+            setMessage({ type: 'error', text: 'Erro ao alterar a senha.' });
+        } else {
+            setMessage({ type: 'success', text: 'Senha alterada com sucesso!' });
+            setNewPassword('');
+            setConfirmNewPassword('');
+        }
+        setTimeout(() => setMessage(null), 3000);
+    };
+    
+    // TODO: Implement user settings for privacy
+    const handlePrivacyChange = () => {};
+    
+    const handleDeleteAccount = () => {
+        alert("A exclusão de conta deve ser implementada com uma função de servidor por segurança.");
+    };
+
+    return (
+        <div className="max-w-4xl mx-auto space-y-8 text-slate-300">
+            {message && (
+                <div className={`p-4 rounded-lg text-center font-semibold animate-fade-in-up ${message.type === 'success' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}`}>
+                    {message.text}
+                </div>
+            )}
+
+            {/* Perfil */}
+            <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                <h3 className="text-xl font-bold text-white mb-4">Perfil</h3>
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                    <div>
+                        <label htmlFor="name" className="block text-sm font-medium mb-1">Nome</label>
+                        <input type="text" id="name" value={name} onChange={e => setName(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
+                    </div>
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" id="email" value={email} disabled className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-3 py-2 text-slate-400 cursor-not-allowed" />
+                    </div>
+                    <div className="text-right">
+                        <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Segurança */}
+             <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                <h3 className="text-xl font-bold text-white mb-4">Alterar Senha</h3>
+                <form onSubmit={handlePasswordChange} className="space-y-4">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label htmlFor="newPassword">Nova Senha</label>
+                            <input type="password" id="newPassword" value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
+                        </div>
+                        <div>
+                            <label htmlFor="confirmNewPassword">Confirmar Nova Senha</label>
+                            <input type="password" id="confirmNewPassword" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white" />
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <button type="submit" className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors">Alterar Senha</button>
+                    </div>
+                </form>
+            </div>
+            
+            {/* Privacidade */}
+            <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl">
+                <h3 className="text-xl font-bold text-white mb-4">Privacidade</h3>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <p className="font-medium text-white">Ocultar valores por padrão</p>
+                        <p className="text-sm text-slate-400">Os valores monetários serão ofuscados ao abrir o app.</p>
+                    </div>
+                    <button onClick={handlePrivacyChange} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors bg-slate-600`}>
+                        <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform translate-x-1`} />
+                    </button>
+                </div>
+            </div>
+
+            {/* Gerenciamento da Conta */}
+            <div className="bg-rose-900/30 border border-rose-500/30 p-6 rounded-2xl">
+                <h3 className="text-xl font-bold text-rose-300 mb-2">Zona de Perigo</h3>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <p className="font-medium text-white">Excluir conta</p>
+                        <p className="text-sm text-rose-300/80">Esta ação é irreversível e todos os seus dados serão perdidos.</p>
+                    </div>
+                    <button onClick={handleDeleteAccount} disabled className="px-5 py-2.5 bg-rose-600 text-white font-semibold rounded-lg hover:bg-rose-700 transition-colors disabled:bg-rose-800/50 disabled:cursor-not-allowed">Excluir Conta</button>
+                </div>
             </div>
         </div>
     );
@@ -1486,11 +1824,11 @@ const App: React.FC = () => {
 
   const viewTitles: Record<View, string> = {
     dashboard: 'Resumo', transactions: 'Lançamentos', cards: 'Meus Cartões',
-    goals: 'Metas', people: 'Pessoas', analysis: 'Análise com IA', accounts: 'Minhas Contas',
-    patrimonio: 'Gestão de Patrimônio'
+    goals: 'Metas', people: 'Pessoas', accounts: 'Minhas Contas',
+    patrimonio: 'Gestão de Patrimônio', settings: 'Configurações'
   };
 
-  const moreMenuViews: View[] = ['patrimonio', 'accounts', 'goals', 'people', 'analysis'];
+  const moreMenuViews: View[] = ['patrimonio', 'accounts', 'goals', 'people', 'settings'];
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-200 font-sans">
@@ -1507,23 +1845,28 @@ const App: React.FC = () => {
             <NavItem view="patrimonio" icon="landmark" label="Patrimônio" />
             <NavItem view="goals" icon="bullseye" label="Metas" />
             <NavItem view="people" icon="users" label="Pessoas" />
-            <NavItem view="analysis" icon="wand-magic-sparkles" label="Análise IA" />
         </nav>
-        <button
-          onClick={() => setTxModalOpen(true)}
-          className="mt-auto w-full bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex items-center justify-center shadow-lg shadow-indigo-600/20"
-        >
-          <Icon name="plus" className="mr-2" />
-          Novo Lançamento
-        </button>
+        <div className="mt-auto space-y-3">
+          <button onClick={() => setActiveView('settings')} className="w-full flex items-center px-4 py-3 text-slate-300 hover:bg-slate-700 hover:text-white rounded-lg transition-colors">
+            <Icon name="cog" className="w-5 h-5 mr-4" /> <span>Configurações</span>
+          </button>
+          <button onClick={handleLogout} className="w-full flex items-center px-4 py-3 text-rose-400 hover:bg-rose-500/20 rounded-lg transition-colors">
+            <Icon name="right-from-bracket" className="w-5 h-5 mr-4" /> <span>Sair</span>
+          </button>
+        </div>
       </aside>
       
       <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 overflow-y-auto">
          <header className="flex justify-between items-center mb-4">
-            <h2 className="text-3xl font-bold text-white">{viewTitles[activeView]}</h2>
-            <button onClick={() => setAreValuesVisible(prev => !prev)} className="text-slate-400 hover:text-white transition-colors" title={areValuesVisible ? "Ocultar valores" : "Mostrar valores"}>
-                <Icon name={areValuesVisible ? "eye" : "eye-slash"} className="text-2xl" />
-            </button>
+            <div>
+                <h2 className="text-3xl font-bold text-white">{viewTitles[activeView]}</h2>
+                {activeView === 'dashboard' && <p className="text-slate-400">Bem-vindo(a) de volta, {user.user_metadata.full_name || user.email}!</p>}
+            </div>
+            {activeView !== 'people' && (
+              <button onClick={() => setAreValuesVisible(prev => !prev)} className="text-slate-400 hover:text-white transition-colors" title={areValuesVisible ? "Ocultar valores" : "Mostrar valores"}>
+                  <Icon name={areValuesVisible ? "eye" : "eye-slash"} className="text-2xl" />
+              </button>
+            )}
         </header>
         <div className="flex-1 pb-20 md:pb-0">
             {renderView()}
@@ -1559,7 +1902,7 @@ const App: React.FC = () => {
                       { view: 'accounts', icon: 'wallet', label: 'Contas' },
                       { view: 'goals', icon: 'bullseye', label: 'Metas' },
                       { view: 'people', icon: 'users', label: 'Pessoas' },
-                      { view: 'analysis', icon: 'wand-magic-sparkles', label: 'Análise IA' }
+                      { view: 'settings', icon: 'cog', label: 'Configurações' },
                     ].map(item => (
                         <li key={item.view}>
                             <button 
@@ -1571,6 +1914,13 @@ const App: React.FC = () => {
                             </button>
                         </li>
                     ))}
+                     <li><hr className="border-slate-700 my-1"/></li>
+                     <li>
+                        <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md text-rose-400 hover:bg-rose-500/20">
+                            <Icon name="right-from-bracket" className="w-5 h-5" />
+                            <span>Sair</span>
+                        </button>
+                     </li>
                 </ul>
             </div>
         </>
@@ -1596,6 +1946,7 @@ const App: React.FC = () => {
         isOpen={isAddCardTxModalOpen} 
         onClose={closeModals} 
         onAddTransaction={handleAddCardTransaction}
+        onAddSplitTransaction={handleAddSplitTransaction}
         onEditTransaction={handleEditCardTransaction}
         editingTransaction={editingTarget?.type === 'cardTransaction' ? editingTarget.data : null}
         cards={creditCards} people={people} categories={categories} 
@@ -1650,12 +2001,6 @@ const App: React.FC = () => {
         editingDebt={editingTarget?.type === 'debt' ? editingTarget.data : null}
         accounts={accounts}
       />
-       <ImportStatementModal
-        isOpen={isImportModalOpen}
-        onClose={closeModals}
-        onImport={handleImportTransactions}
-        accounts={accounts}
-      />
        <TransferModal
         isOpen={isTransferModalOpen}
         onClose={closeModals}
@@ -1665,5 +2010,39 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+
+const App: React.FC = () => {
+    const [session, setSession] = useState<Session | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setSession(session);
+            setLoading(false);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setSession(session);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-900">
+                <Icon name="spinner" className="text-4xl text-indigo-400 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!session) {
+        return <Auth />;
+    }
+
+    return <MainApp key={session.user.id} session={session} />;
+};
+
 
 export default App;

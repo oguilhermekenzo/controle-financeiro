@@ -144,10 +144,3 @@ export interface Debt {
     firstDueDate: string; // Data de vencimento da primeira parcela (AAAA-MM-DD)
     accountId: string; // ID da conta para débito das parcelas
 }
-
-export interface ParsedTransaction {
-    date: string;
-    description: string;
-    amount: number;
-    type: TransactionType;
-}

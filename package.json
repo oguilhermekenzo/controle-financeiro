@@ -6,10 +6,9 @@
     "build": "rm -rf dist && esbuild index.tsx --bundle --outfile=dist/bundle.js --minify --sourcemap && cp -r public/. dist/"
   },
   "dependencies": {
-    "@google/genai": "^0.14.0",
+    "@supabase/supabase-js": "^2.43.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-markdown": "^9.0.1",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
